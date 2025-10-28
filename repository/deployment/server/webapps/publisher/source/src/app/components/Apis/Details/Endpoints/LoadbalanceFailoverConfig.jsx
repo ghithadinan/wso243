@@ -20,8 +20,8 @@ import {
     Dialog,
     DialogContent,
     DialogTitle,
-    Accordion, 
-    AccordionSummary, 
+    Accordion,
+    AccordionSummary,
     AccordionDetails,
     Grid,
     Icon,
@@ -32,7 +32,7 @@ import {
 } from '@mui/material';
 import PropTypes from 'prop-types';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { FormattedMessage, injectIntl } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import cloneDeep from 'lodash.clonedeep';
 import { isRestricted } from 'AppData/AuthManager';
 import APIContext from 'AppComponents/Apis/Details/components/ApiContext';
@@ -119,11 +119,6 @@ const Root = styled('div')((
     }
 }));
 
-const endpointTypes = [
-    { key: 'none', value: 'None' },
-    { key: 'failover', value: 'Failover' },
-    { key: 'load_balance', value: 'Load Balanced' },
-];
 
 /**
  * The component which holds the load balance and failover configuration.
@@ -139,12 +134,38 @@ function LoadbalanceFailoverConfig(props) {
         toggleESConfig,
         globalEpType,
         handleEndpointCategorySelect,
+        componentValidator,
     } = props;
     const { api } = useContext(APIContext);
     const [isConfigExpanded, setConfigExpand] = useState(false);
     const [endpointType, setEndpointType] = useState(props);
     const [isLBConfigOpen, setLBConfigOpen] = useState(false);
+    const intl = useIntl();
 
+    const endpointTypes = [
+        {
+            key: 'none',
+            value: intl.formatMessage({
+                id: 'Apis.Details.Endpoints.LoadbalanceFailoverConfig.types.none',
+                defaultMessage: 'None',
+            }),
+        },
+        {
+            key: 'failover',
+            value: intl.formatMessage({
+                id: 'Apis.Details.Endpoints.LoadbalanceFailoverConfig.types.failover',
+                defaultMessage: 'Failover',
+            }),
+        },
+        {
+            key: 'load_balance',
+            value: intl.formatMessage({
+                id: 'Apis.Details.Endpoints.LoadbalanceFailoverConfig.types.load.balanced',
+                defaultMessage: 'Load Balanced',
+            }),
+        },
+    ];
+    
     useEffect(() => {
         const epType = epConfig.endpoint_type;
         if (epType === 'http' || epType === 'address') {
@@ -291,7 +312,10 @@ function LoadbalanceFailoverConfig(props) {
                                             />
                                         )}
                                         value={endpointType}
-                                        placeholder='Endpoint'
+                                        placeholder={intl.formatMessage({
+                                            id: 'Apis.Details.Endpoints.LoadbalanceFailoverConfig.endpoint.placeholder',
+                                            defaultMessage: 'Endpoint',
+                                        })}
                                         onChange={handleEndpointTypeSelect}
                                         margin='normal'
                                         variant='outlined'
@@ -354,6 +378,7 @@ function LoadbalanceFailoverConfig(props) {
                                                 setESConfigOpen={toggleESConfig}
                                                 category='production_endpoints'
                                                 apiId={api.id}
+                                                componentValidator={componentValidator}
                                             />
                                         </Grid>
                                     )}
@@ -389,6 +414,7 @@ function LoadbalanceFailoverConfig(props) {
                                                 setESConfigOpen={toggleESConfig}
                                                 category='sandbox_endpoints'
                                                 apiId={api.id}
+                                                componentValidator={componentValidator}
                                             />
                                         </Grid>
                                     )}
@@ -433,7 +459,6 @@ LoadbalanceFailoverConfig.propTypes = {
     toggleESConfig: PropTypes.func.isRequired,
     handleEndpointCategorySelect: PropTypes.func.isRequired,
     globalEpType: PropTypes.shape({}).isRequired,
-    intl: PropTypes.shape({}).isRequired,
 };
 
-export default injectIntl((LoadbalanceFailoverConfig));
+export default LoadbalanceFailoverConfig;

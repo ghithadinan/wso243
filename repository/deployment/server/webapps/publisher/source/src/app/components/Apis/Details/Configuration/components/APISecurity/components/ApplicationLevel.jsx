@@ -35,10 +35,12 @@ import HelpOutline from '@mui/icons-material/HelpOutline';
 import Radio from '@mui/material/Radio';
 import RadioGroup from '@mui/material/RadioGroup';
 import FormHelperText from '@mui/material/FormHelperText';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { isRestricted } from 'AppData/AuthManager';
+import CONSTS from 'AppData/Constants';
 import { useAPI } from 'AppComponents/Apis/Details/components/ApiContext';
 import KeyManager from 'AppComponents/Apis/Details/Configuration/components/KeyManager';
+import Audience from 'AppComponents/Apis/Details/Configuration/components/Audience';
 import API from 'AppData/api';
 
 import {
@@ -100,10 +102,14 @@ const Root = styled('div')((
  */
 export default function ApplicationLevel(props) {
     const {
-        haveMultiLevelSecurity, securityScheme, configDispatcher, api,
+        haveMultiLevelSecurity, securityScheme, configDispatcher, api, componentValidator
     } = props;
     const [apiFromContext] = useAPI();
-
+    const [oauth2Enabled, setOauth2Enabled] = useState(securityScheme.includes(DEFAULT_API_SECURITY_OAUTH2));
+    const [apiKeyEnabled, setApiKeyEnabled] = useState(securityScheme.includes(API_SECURITY_API_KEY));
+    const intl = useIntl();
+    const isSubValidationDisabled = apiFromContext.policies && apiFromContext.policies.length === 1 
+        && apiFromContext.policies[0].includes(CONSTS.DEFAULT_SUBSCRIPTIONLESS_PLAN);
     let mandatoryValue = null;
     let hasResourceWithSecurity;
     if (apiFromContext.apiType === API.CONSTS.APIProduct) {
@@ -159,8 +165,8 @@ export default function ApplicationLevel(props) {
                     <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                         <Typography className={classes.subHeading} variant='h6' component='h4'>
                             <FormattedMessage
-                                id='Apis.Details.Configuration.Components.APISecurity.Components.
-                                    ApplicationLevel.http'
+                                id={'Apis.Details.Configuration.Components.APISecurity.Components.'
+                                        + 'ApplicationLevel.http'}
                                 defaultMessage='Application Level Security'
                             />
                             <Tooltip
@@ -186,22 +192,31 @@ export default function ApplicationLevel(props) {
                     </AccordionSummary>
                     <AccordionDetails className={classes.expansionPanelDetails}>
                         <FormGroup style={{ display: 'flow-root' }}>
-                            <FormControlLabel
-                                control={(
-                                    <Checkbox
-                                        disabled={isRestricted(['apim:api_create'], apiFromContext)}
-                                        checked={securityScheme.includes(DEFAULT_API_SECURITY_OAUTH2)}
-                                        onChange={({ target: { checked, value } }) => configDispatcher({
-                                            action: 'securityScheme',
-                                            event: { checked, value },
-                                        })}
-                                        value={DEFAULT_API_SECURITY_OAUTH2}
-                                        color='primary'
-                                    />
-                                )}
-                                label='OAuth2'
-                            />
-                            {(apiFromContext.gatewayType === 'wso2/synapse' ||
+                            {componentValidator.includes('oauth2') && 
+                                <FormControlLabel
+                                    control={(
+                                        <Checkbox
+                                            disabled={isRestricted(['apim:api_create'], apiFromContext)}
+                                            checked={securityScheme.includes(DEFAULT_API_SECURITY_OAUTH2)}
+                                            onChange={({ target: { checked, value } }) => {
+                                                setOauth2Enabled(checked);
+                                                configDispatcher({
+                                                    action: 'securityScheme',
+                                                    event: { checked, value },
+                                                });
+                                            }}
+                                            value={DEFAULT_API_SECURITY_OAUTH2}
+                                            color='primary'
+                                        />
+                                    )}
+                                    label={intl.formatMessage({
+                                        id: 'Apis.Details.Configuration.Components.APISecurity.Components.'
+                                            + 'ApplicationLevel.security.scheme.oauth2',
+                                        defaultMessage: 'OAuth2',
+                                    })}
+                                />
+                            }
+                            {(componentValidator.includes('basicAuth') ||
                                 apiFromContext.apiType === API.CONSTS.APIProduct) && (
                                 <FormControlLabel
                                     control={(
@@ -217,25 +232,41 @@ export default function ApplicationLevel(props) {
                                             id='api-security-basic-auth-checkbox'
                                         />
                                     )}
-                                    label='Basic'
+                                    label={intl.formatMessage({
+                                        id: 'Apis.Details.Configuration.Components.APISecurity.Components.'
+                                            + 'ApplicationLevel.security.scheme.basic',
+                                        defaultMessage: 'Basic',
+                                    })}
                                 />
                             )}
-                            <FormControlLabel
-                                control={(
-                                    <Checkbox
-                                        checked={securityScheme.includes(API_SECURITY_API_KEY)}
-                                        disabled={isRestricted(['apim:api_create'], apiFromContext)}
-                                        onChange={({ target: { checked, value } }) => configDispatcher({
-                                            action: 'securityScheme',
-                                            event: { checked, value },
-                                        })}
-                                        value={API_SECURITY_API_KEY}
-                                        color='primary'
-                                        id='api-security-api-key-checkbox'
-                                    />
-                                )}
-                                label='Api Key'
-                            />
+                            {componentValidator.includes('apikey') &&
+                                <FormControlLabel
+                                    control={(
+                                        <Checkbox
+                                            checked={securityScheme.includes(API_SECURITY_API_KEY)}
+                                            disabled={
+                                                isRestricted(['apim:api_create'], apiFromContext) 
+                                                || isSubValidationDisabled
+                                            }
+                                            onChange={({ target: { checked, value } }) => {
+                                                setApiKeyEnabled(checked);
+                                                configDispatcher({
+                                                    action: 'securityScheme',
+                                                    event: { checked, value },
+                                                });
+                                            }}
+                                            value={API_SECURITY_API_KEY}
+                                            color='primary'
+                                            id='api-security-api-key-checkbox'
+                                        />
+                                    )}
+                                    label={intl.formatMessage({
+                                        id: 'Apis.Details.Configuration.Components.APISecurity.Components.'
+                                            + 'ApplicationLevel.security.scheme.api.key',
+                                        defaultMessage: 'Api Key',
+                                    })}
+                                />
+                            }
                         </FormGroup>
                         <FormControl className={classes.bottomSpace} component='fieldset'>
                             <RadioGroup
@@ -260,7 +291,11 @@ export default function ApplicationLevel(props) {
                                             color='primary'
                                         />
                                     )}
-                                    label='Mandatory'
+                                    label={intl.formatMessage({
+                                        id: 'Apis.Details.Configuration.Components.APISecurity.Components.'
+                                            + 'ApplicationLevel.security.scheme.mandatory',
+                                        defaultMessage: 'Mandatory',
+                                    })}
                                     labelPlacement='end'
                                 />
                                 <FormControlLabel
@@ -272,7 +307,11 @@ export default function ApplicationLevel(props) {
                                             color='primary'
                                         />
                                     )}
-                                    label='Optional'
+                                    label={intl.formatMessage({
+                                        id: 'Apis.Details.Configuration.Components.APISecurity.Components.'
+                                            + 'ApplicationLevel.security.scheme.optional',
+                                        defaultMessage: 'Optional',
+                                    })}
                                     labelPlacement='end'
                                 />
                             </RadioGroup>
@@ -283,14 +322,28 @@ export default function ApplicationLevel(props) {
                                 />
                             </FormHelperText>
                         </FormControl>
-                        {(apiFromContext.apiType === API.CONSTS.API) && (
+                        {oauth2Enabled && componentValidator.includes("audienceValidation") && (
+                            <Audience
+                                api={api}
+                                configDispatcher={configDispatcher}
+                            />
+                        )}
+                        {(apiFromContext.apiType === API.CONSTS.API) && oauth2Enabled &&
+                            componentValidator.includes("keyManagerConfig") && (
                             <KeyManager
                                 api={api}
                                 configDispatcher={configDispatcher}
                             />
                         )}
-                        <AuthorizationHeader api={api} configDispatcher={configDispatcher} />
-                        <ApiKeyHeader api={api} configDispatcher={configDispatcher} />
+                        {componentValidator.includes('oauth2') &&
+                            <AuthorizationHeader 
+                                api={api} 
+                                configDispatcher={configDispatcher} 
+                                oauth2Enabled={oauth2Enabled} 
+                            />
+                        } {componentValidator.includes('apikey') &&
+                            <ApiKeyHeader api={api} configDispatcher={configDispatcher} apiKeyEnabled={apiKeyEnabled} />
+                        }   
                         <FormControl>
                             {!hasResourceWithSecurity
                             && (

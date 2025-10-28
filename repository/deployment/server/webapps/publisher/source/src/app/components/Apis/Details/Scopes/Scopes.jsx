@@ -261,6 +261,18 @@ class Scopes extends React.Component {
             download: false,
             viewColumns: false,
             customToolbar: false,
+            textLabels: {
+                pagination: {
+                    rowsPerPage: intl.formatMessage({
+                        id: 'Mui.data.table.pagination.rows.per.page',
+                        defaultMessage: 'Rows per page:',
+                    }),
+                    displayRows: intl.formatMessage({
+                        id: 'Mui.data.table.pagination.display.rows',
+                        defaultMessage: 'of',
+                    }),
+                },
+            },
         };
 
         const scopesList = api.scopes.filter((apiScope) => {
@@ -356,7 +368,7 @@ class Scopes extends React.Component {
         }
 
         return (
-            <div className={classes.heading}>
+            <Root className={classes.heading}>
                 <div className={classes.titleWrapper}>
                     <Typography variant='h4' component='h2' align='left' className={classes.mainTitle}>
                         <FormattedMessage
@@ -407,7 +419,7 @@ class Scopes extends React.Component {
                 </div>
 
                 <MUIDataTable title={false} data={scopesList} columns={columns} options={options}/>
-            </div>
+            </Root>
         );
     }
 }

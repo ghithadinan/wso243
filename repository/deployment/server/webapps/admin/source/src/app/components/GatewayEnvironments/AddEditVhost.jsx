@@ -16,7 +16,8 @@
  * under the License.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useAppContext } from 'AppComponents/Shared/AppContext';
 import { styled } from '@mui/material/styles';
 import PropTypes from 'prop-types';
 import TextField from '@mui/material/TextField';
@@ -41,13 +42,16 @@ const StyledSpan = styled('span')(({ theme }) => ({ color: theme.palette.error.d
 
 function AddEditVhost(props) {
     const intl = useIntl();
-    const { onVhostChange, initialVhosts, gatewayType } = props;
-
-    const [userVhosts, setUserVhosts] = useState(initialVhosts);
+    const {
+        onVhostChange, initialVhosts, gatewayType, isEditMode,
+    } = props;
+    const [userVhosts, setUserVhosts] = useState([]);
     const [id, setId] = useState(0);
     const defaultVhost = {
         host: '', httpContext: '', httpsPort: 8243, httpPort: 8280, wssPort: 8099, wsPort: 9099, isNew: true,
     };
+    const prevRef = useRef();
+    const { settings } = useAppContext();
 
     // change handlers
     const updateChanges = (key, field, newValue) => {
@@ -129,6 +133,66 @@ function AddEditVhost(props) {
         }
     }, []);
 
+    const isUserVhostsUpdated = (vhosts) => {
+        if (vhosts.length > 0) {
+            // check whether only the default vhost exists
+            if (vhosts.length === 1 && vhosts[0].host === '') {
+                return false;
+            }
+            return true;
+        }
+        return false;
+    };
+
+    useEffect(() => {
+        if (prevRef.gatewayType !== gatewayType) {
+            const config = settings.gatewayConfiguration.filter((t) => t.type === gatewayType)[0];
+            if (initialVhosts && initialVhosts.length > 0) {
+                let i = 0;
+                if (config && !isEditMode) {
+                    const defaultHostnameTemplate = config.defaultHostnameTemplate
+                        ? config.defaultHostnameTemplate : '';
+                    setUserVhosts(initialVhosts.map((vhost) => {
+                        const keyedVhost = vhost;
+                        keyedVhost.key = '' + i++;
+                        keyedVhost.host = defaultHostnameTemplate;
+                        if (defaultHostnameTemplate !== '') {
+                            keyedVhost.isNew = false;
+                        }
+                        return keyedVhost;
+                    }));
+                } else {
+                    setUserVhosts(initialVhosts.map((vhost) => {
+                        const keyedVhost = vhost;
+                        keyedVhost.key = '' + i++;
+                        return keyedVhost;
+                    }));
+                }
+                setId(i);
+            } else {
+                setId(id + 1);
+                const vhost = defaultVhost;
+                vhost.key = '' + id;
+                if (config && config.defaultHostnameTemplate) {
+                    vhost.host = config.defaultHostnameTemplate;
+                    if (config.defaultHostnameTemplate !== '') {
+                        vhost.isNew = false;
+                    }
+                }
+                setUserVhosts([vhost]);
+            }
+            prevRef.gatewayType = gatewayType;
+        } else if (!isUserVhostsUpdated(userVhosts) && initialVhosts && initialVhosts.length > 0) {
+            let i = 0;
+            setUserVhosts(initialVhosts.map((vhost) => {
+                const keyedVhost = vhost;
+                keyedVhost.key = '' + i++;
+                return keyedVhost;
+            }));
+            setId(i);
+        }
+    }, [initialVhosts, gatewayType]);
+
     let vhostCounter = 1;
     return (
         <FormGroup>
@@ -159,7 +223,12 @@ function AddEditVhost(props) {
                                             </span>
                                         )}
                                         value={vhost.host}
-                                        helperText='ex: mg.wso2.com'
+                                        helperText={(
+                                            <FormattedMessage
+                                                id='GatewayEnvironments.AddEditVhost.host.helper.text'
+                                                defaultMessage='ex: mg.wso2.com'
+                                            />
+                                        )}
                                         variant='outlined'
                                         data-testid='vhost'
                                     />
@@ -174,7 +243,10 @@ function AddEditVhost(props) {
                                             onClick={() => handleRemoveVhostConfirm(vhost.key, vhost.isNew)}
                                             disabled={userVhosts.length === 1}
                                         >
-                                            Remove
+                                            <FormattedMessage
+                                                id='GatewayEnvironments.AddEditVhost.host.remove.btn'
+                                                defaultMessage='Remove'
+                                            />
                                         </Button>
                                     </Grid>
                                     <Dialog
@@ -184,28 +256,44 @@ function AddEditVhost(props) {
                                         aria-describedby='alert-dialog-description'
                                     >
                                         <DialogTitle id='alert-dialog-title'>
-                                            Remove Existing Vhost?
+                                            <FormattedMessage
+                                                id='GatewayEnvironments.AddEditVhost.host.remove.dialog.title'
+                                                defaultMessage='Remove Existing Vhost?'
+                                            />
                                         </DialogTitle>
                                         <DialogContent>
                                             <DialogContentText id='alert-dialog-description'>
-                                                Removing an existing VHost may result in inconsistent state if APIs
-                                                are deployed with this VHost. Please make sure there are no APIs
-                                                deployed with this VHost or redeploy those APIs.
+                                                <FormattedMessage
+                                                    id='GatewayEnvironments.AddEditVhost.host.remove.dialog.content'
+                                                    defaultMessage={'Removing an existing VHost may result in '
+                                                        + 'inconsistent state if APIs are deployed with this VHost. '
+                                                        + 'Please make sure there are no APIs deployed with this VHost '
+                                                        + 'or redeploy those APIs.'}
+                                                />
                                             </DialogContentText>
                                         </DialogContent>
                                         <DialogActions>
                                             <Button onClick={handleClose} color='primary' autoFocus>
-                                                No, Don&apos;t Remove
+                                                <FormattedMessage
+                                                    id='GatewayEnvironments.AddEditVhost.host.remove.dialog.no.btn'
+                                                    defaultMessage='No, Don&apos;t Remove'
+                                                />
                                             </Button>
                                             <Button onClick={() => handleRemoveVhost('')} color='primary'>
-                                                Yes
+                                                <FormattedMessage
+                                                    id='GatewayEnvironments.AddEditVhost.host.remove.dialog.yes.btn'
+                                                    defaultMessage='Yes'
+                                                />
                                             </Button>
                                         </DialogActions>
                                     </Dialog>
                                 </Grid>
                                 <Grid item xs={12}>
                                     <Typography variant='body1' style={{ marginLeft: '8px' }}>
-                                        Gateway Access URLs
+                                        <FormattedMessage
+                                            id='GatewayEnvironments.AddEditVhost.host.gateway.access.url'
+                                            defaultMessage='Gateway Access URLs'
+                                        />
                                     </Typography>
                                 </Grid>
                                 <Grid item xs={12}>
@@ -229,7 +317,12 @@ function AddEditVhost(props) {
                                             aria-controls='panel1a-content'
                                             id='panel1a-header'
                                         >
-                                            <Typography>Advanced Settings</Typography>
+                                            <Typography>
+                                                <FormattedMessage
+                                                    id='GatewayEnvironments.AddEditVhost.host.gateway.advanced.settings'
+                                                    defaultMessage='Advanced Settings'
+                                                />
+                                            </Typography>
                                         </AccordionSummary>
                                         <AccordionDetails>
                                             <Grid container>
@@ -242,7 +335,13 @@ function AddEditVhost(props) {
                                                                 name={vhost.key}
                                                                 disabled={!vhost.isNew}
                                                                 onChange={changeHandler('httpContext')}
-                                                                label='HTTP(s) context'
+                                                                label={(
+                                                                    <FormattedMessage
+                                                                        id={'GatewayEnvironments.AddEditVhost.host.'
+                                                                            + 'gateway.http.context'}
+                                                                        defaultMessage='HTTP(s) context'
+                                                                    />
+                                                                )}
                                                                 value={vhost.httpContext}
                                                                 variant='outlined'
                                                             />
@@ -338,16 +437,22 @@ function AddEditVhost(props) {
                     </Grid>
                 ))}
                 {/* Add new VHost */}
-                <Grid item xs={12}>
-                    <Button
-                        name='newVhost'
-                        variant='outlined'
-                        color='primary'
-                        onClick={handleNewVhost}
-                    >
-                        New VHost
-                    </Button>
-                </Grid>
+                {(gatewayType === 'Regular' || gatewayType === 'APK' || gatewayType === 'other')
+                    && (
+                        <Grid item xs={12}>
+                            <Button
+                                name='newVhost'
+                                variant='outlined'
+                                color='primary'
+                                onClick={handleNewVhost}
+                            >
+                                <FormattedMessage
+                                    id='GatewayEnvironments.AddEditVhost.add.vhost.btn'
+                                    defaultMessage='New VHost'
+                                />
+                            </Button>
+                        </Grid>
+                    )}
             </Grid>
         </FormGroup>
     );

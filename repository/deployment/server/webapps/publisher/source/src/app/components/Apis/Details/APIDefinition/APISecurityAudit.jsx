@@ -36,7 +36,7 @@ import MUIDataTable from 'mui-datatables';
 
 import TableRow from '@mui/material/TableRow';
 import TableCell from '@mui/material/TableCell';
-import MonacoEditor from 'react-monaco-editor';
+import { Editor as MonacoEditor } from '@monaco-editor/react';
 
 const styles = {
     rootPaper: (theme) => ({
@@ -369,8 +369,8 @@ class APISecurityAudit extends Component {
                         ),
                         options: {
                             isWholeLine: true,
-                            sx: styles.inlineDecoration,
-                            glyphMarginClassName: styles.contentLine,
+                            className: 'background: #FF0000;',
+                            glyphMarginClassName: 'background: #add8e6;',
                         },
                     },
                 ]);
@@ -396,8 +396,9 @@ class APISecurityAudit extends Component {
      */
     render() {
         const {
-            report, overallScore, numErrors, externalApiId, loading, apiDefinition,
+            report, overallScore, numErrors, externalApiId, loading, apiDefinition
         } = this.state;
+        const { intl } = this.props;
 
         const reportObject = JSON.parse(report);
         const linkToDetailedReport = 'https://platform.42crunch.com/apis/' + externalApiId + '/security-audit-report';
@@ -579,7 +580,7 @@ class APISecurityAudit extends Component {
                                     theme='vs-dark'
                                     value={apiDefinition}
                                     options={editorOptions}
-                                    editorDidMount={(editor, monaco) => this.editorDidMount(editor, monaco, searchTerm)}
+                                    onMount={(editor, monaco) => this.editorDidMount(editor, monaco, searchTerm)}
                                 />
                             </TableCell>
                             <TableCell sx={styles.columnTwo}>
@@ -617,7 +618,7 @@ class APISecurityAudit extends Component {
                                     theme='vs-dark'
                                     value={apiDefinition}
                                     options={editorOptions}
-                                    editorDidMount={(editor, monaco) => this.editorDidMount(editor, monaco, searchTerm)}
+                                    onMount={(editor, monaco) => this.editorDidMount(editor, monaco, searchTerm)}
                                 />
                             </TableCell>
                             <TableCell>
@@ -645,6 +646,18 @@ class APISecurityAudit extends Component {
                         </TableRow>
                     );
                 }
+            },
+            textLabels: {
+                pagination: {
+                    rowsPerPage: intl.formatMessage({
+                        id: 'Mui.data.table.pagination.rows.per.page',
+                        defaultMessage: 'Rows per page:',
+                    }),
+                    displayRows: intl.formatMessage({
+                        id: 'Mui.data.table.pagination.display.rows',
+                        defaultMessage: 'of',
+                    }),
+                },
             },
         };
         return (
@@ -699,8 +712,7 @@ class APISecurityAudit extends Component {
                                                     sx={styles.circularProgressBarScore}
                                                 >
                                                     <FormattedMessage
-                                                        id='Apis.Details.APIDefinition.AuditApi
-                                                                    .OverallScoreProgress'
+                                                        id='Apis.Details.APIDefinition.AuditApi.OverallScoreProgress'
                                                         defaultMessage='{overallScore}'
                                                         values={{
                                                             overallScore: (
@@ -906,86 +918,97 @@ class APISecurityAudit extends Component {
                                 </div>
                             </Paper>
                         </StyledDiv>
-                        {
-                            <StyledDiv sx={styles.paperDiv}>
-                                <Paper elevation={1} sx={styles.rootPaper}>
-                                    <div>
-                                        <Typography variant='h5' sx={styles.sectionHeadingTypography}>
-                                            <FormattedMessage
-                                                id='Apis.Details.APIDefinition.AuditApi.OpenApiFormatRequirements'
-                                                defaultMessage='OpenAPI Format Requirements'
-                                            />
-                                        </Typography>
-                                        {{}.hasOwnProperty.call(reportObject, 'semanticErrors')
-                                            && (
-                                                <>
-                                                    <div>
-                                                        <Typography variant='body1'>
-                                                            <StyledEngineProvider injectFirst>
-                                                                <ThemeProvider theme={this.getMuiTheme()}>
-                                                                    <MUIDataTable
-                                                                        title='Semantic Errors'
-                                                                        data={this.getRowData(
-                                                                            reportObject.semanticErrors.issues,
-                                                                            'OpenAPI Format Requirements',
-                                                                            'error',
-                                                                        )}
-                                                                        columns={errorColumns}
-                                                                        options={options}
-                                                                    />
-                                                                </ThemeProvider>
-                                                            </StyledEngineProvider>
-                                                        </Typography>
-                                                    </div>
-                                                </>
-                                            )}
-                                        {{}.hasOwnProperty.call(reportObject, 'validationErrors')
-                                            && (
-                                                <>
-                                                    <div>
-                                                        <Typography variant='body1'>
-                                                            <StyledEngineProvider injectFirst>
-                                                                <ThemeProvider theme={this.getErrorMuiTheme()}>
-                                                                    <MUIDataTable
-                                                                        title='Structural Errors'
-                                                                        data={this.getRowData(
-                                                                            reportObject.validationErrors.issues,
-                                                                            'OpenAPI Format Requirements',
-                                                                            'error',
-                                                                        )}
-                                                                        columns={errorColumns}
-                                                                        options={options}
-                                                                    />
-                                                                </ThemeProvider>
-                                                            </StyledEngineProvider>
-                                                        </Typography>
-                                                    </div>
-                                                </>
-                                            )}
-                                        {{}.hasOwnProperty.call(reportObject, 'warnings')
-                                            && (
-                                                <>
-                                                    <div>
-                                                        <Typography variant='body1'>
-                                                            <StyledEngineProvider injectFirst>
-                                                                <ThemeProvider theme={this.getErrorMuiTheme()}>
-                                                                    <MUIDataTable
-                                                                        title='Best Practices Issues'
-                                                                        data={this.getRowData(
-                                                                            reportObject.warnings.issues,
-                                                                            'OpenAPI Format Requirements',
-                                                                            'error',
-                                                                        )}
-                                                                        columns={errorColumns}
-                                                                        options={options}
-                                                                    />
-                                                                </ThemeProvider>
-                                                            </StyledEngineProvider>
-                                                        </Typography>
-                                                    </div>
-                                                </>
-                                            )}
-                                        {!{}.hasOwnProperty.call(reportObject, 'validationErrors')
+                        <StyledDiv sx={styles.paperDiv}>
+                            <Paper elevation={1} sx={styles.rootPaper}>
+                                <div>
+                                    <Typography variant='h5' sx={styles.sectionHeadingTypography}>
+                                        <FormattedMessage
+                                            id='Apis.Details.APIDefinition.AuditApi.OpenApiFormatRequirements'
+                                            defaultMessage='OpenAPI Format Requirements'
+                                        />
+                                    </Typography>
+                                    {{}.hasOwnProperty.call(reportObject, 'semanticErrors')
+                                        && (
+                                            <>
+                                                <div>
+                                                    <Typography variant='body1'>
+                                                        <StyledEngineProvider injectFirst>
+                                                            <ThemeProvider theme={this.getMuiTheme()}>
+                                                                <MUIDataTable
+                                                                    title={intl.formatMessage({
+                                                                        id: 'Apis.Details.APIDefinition.AuditApi'
+                                                                            + '.table.semantic.errors',
+                                                                        defaultMessage: 'Semantic Errors',
+                                                                    })}
+                                                                    data={this.getRowData(
+                                                                        reportObject.semanticErrors.issues,
+                                                                        'OpenAPI Format Requirements',
+                                                                        'error',
+                                                                    )}
+                                                                    columns={errorColumns}
+                                                                    options={options}
+                                                                />
+                                                            </ThemeProvider>
+                                                        </StyledEngineProvider>
+                                                    </Typography>
+                                                </div>
+                                            </>
+                                        )}
+                                    {{}.hasOwnProperty.call(reportObject, 'validationErrors')
+                                        && (
+                                            <>
+                                                <div>
+                                                    <Typography variant='body1'>
+                                                        <StyledEngineProvider injectFirst>
+                                                            <ThemeProvider theme={this.getErrorMuiTheme()}>
+                                                                <MUIDataTable
+                                                                    title={intl.formatMessage({
+                                                                        id: 'Apis.Details.APIDefinition.AuditApi'
+                                                                            + '.table.structural.errors',
+                                                                        defaultMessage: 'Structural Errors',
+                                                                    })}
+                                                                    data={this.getRowData(
+                                                                        reportObject.validationErrors.issues,
+                                                                        'OpenAPI Format Requirements',
+                                                                        'error',
+                                                                    )}
+                                                                    columns={errorColumns}
+                                                                    options={options}
+                                                                />
+                                                            </ThemeProvider>
+                                                        </StyledEngineProvider>
+                                                    </Typography>
+                                                </div>
+                                            </>
+                                        )}
+                                    {{}.hasOwnProperty.call(reportObject, 'warnings')
+                                        && (
+                                            <>
+                                                <div>
+                                                    <Typography variant='body1'>
+                                                        <StyledEngineProvider injectFirst>
+                                                            <ThemeProvider theme={this.getErrorMuiTheme()}>
+                                                                <MUIDataTable
+                                                                    title={intl.formatMessage({
+                                                                        id: 'Apis.Details.APIDefinition.'
+                                                                            + 'AuditApi.table.best.practices',
+                                                                        defaultMessage: 'Best Practices Issues',
+                                                                    })}
+                                                                    data={this.getRowData(
+                                                                        reportObject.warnings.issues,
+                                                                        'OpenAPI Format Requirements',
+                                                                        'error',
+                                                                    )}
+                                                                    columns={errorColumns}
+                                                                    options={options}
+                                                                />
+                                                            </ThemeProvider>
+                                                        </StyledEngineProvider>
+                                                    </Typography>
+                                                </div>
+                                            </>
+                                        )}
+                                    {!{}.hasOwnProperty.call(reportObject, 'validationErrors')
                                         && !{}.hasOwnProperty.call(reportObject, 'semanticErrors')
                                         && !{}.hasOwnProperty.call(reportObject, 'warnings')
                                         && (
@@ -996,10 +1019,9 @@ class APISecurityAudit extends Component {
                                                 />
                                             </Typography>
                                         )}
-                                    </div>
-                                </Paper>
-                            </StyledDiv>
-                        }
+                                </div>
+                            </Paper>
+                        </StyledDiv>
                         {{}.hasOwnProperty.call(reportObject, 'security')
                             && (
                                 <StyledDiv sx={styles.paperDiv}>
@@ -1112,7 +1134,11 @@ class APISecurityAudit extends Component {
                                                         <StyledEngineProvider injectFirst>
                                                             <ThemeProvider theme={this.getMuiTheme()}>
                                                                 <MUIDataTable
-                                                                    title='Issues'
+                                                                    title={intl.formatMessage({
+                                                                        id: 'Apis.Details.APIDefinition.'
+                                                                            + 'AuditApi.table.issues',
+                                                                        defaultMessage: 'Issues',
+                                                                    })}
                                                                     data={this.getRowData(
                                                                         reportObject.security.issues,
                                                                         'Security',
@@ -1241,7 +1267,11 @@ class APISecurityAudit extends Component {
                                                         <StyledEngineProvider injectFirst>
                                                             <ThemeProvider theme={this.getMuiTheme()}>
                                                                 <MUIDataTable
-                                                                    title='Issues'
+                                                                    title={intl.formatMessage({
+                                                                        id: 'Apis.Details.APIDefinition.AuditApi.'
+                                                                            + 'table.issues',
+                                                                        defaultMessage: 'Issues',
+                                                                    })}
                                                                     data={this.getRowData(
                                                                         reportObject.data.issues,
                                                                         'Data Validation',

@@ -17,7 +17,7 @@
  */
 
 import React, {
-    useReducer, useState, Suspense, lazy, useEffect,
+    useReducer, useState, Suspense, useEffect,
 } from 'react';
 import PropTypes from 'prop-types';
 import TextField from '@mui/material/TextField';
@@ -35,7 +35,7 @@ import InlineMessage from 'AppComponents/Shared/InlineMessage';
 import Joi from '@hapi/joi';
 import { green } from '@mui/material/colors';
 
-const MonacoEditor = lazy(() => import('react-monaco-editor' /* webpackChunkName: "CustomPolicyAddMonacoEditor" */));
+import { Editor as MonacoEditor } from '@monaco-editor/react';
 
 const sampleSiddhiQuery = "FROM RequestStream SELECT userId, ( userId == 'admin@carbon.super' ) "
 + "AS isEligible , str:concat('admin@carbon.super','') as throttleKey "
@@ -223,10 +223,10 @@ function AddEdit(props) {
             return promisedAddCustomPolicy
                 .then(() => {
                     Alert.success(
-                        <FormattedMessage
-                            id='Throttling.Custom.Policy.policy.edit.success'
-                            defaultMessage='Custom Policy edited successfully'
-                        />,
+                        intl.formatMessage({
+                            id: 'Throttling.Custom.Policy.policy.edit.success',
+                            defaultMessage: 'Custom Policy edited successfully',
+                        }),
                     );
                     history.push('/throttling/custom');
                 })
@@ -249,10 +249,10 @@ function AddEdit(props) {
             return promisedAddCustomPolicy
                 .then(() => {
                     Alert.success(
-                        <FormattedMessage
-                            id='Throttling.Custom.Policy.policy.add.success'
-                            defaultMessage='Custom Policy added successfully.'
-                        />,
+                        intl.formatMessage({
+                            id: 'Throttling.Custom.Policy.policy.add.success',
+                            defaultMessage: 'Custom Policy added successfully.',
+                        }),
                     );
                     history.push('/throttling/custom');
                 })
@@ -291,7 +291,10 @@ function AddEdit(props) {
                             autoFocus
                             margin='dense'
                             name='policyName'
-                            label='Name'
+                            label={intl.formatMessage({
+                                id: 'Admin.Throttling.Custom.Throttling.policy.add.field.name',
+                                defaultMessage: 'Name',
+                            })}
                             fullWidth
                             required
                             variant='outlined'
@@ -315,7 +318,10 @@ function AddEdit(props) {
                         <TextField
                             margin='dense'
                             name='description'
-                            label='Description'
+                            label={intl.formatMessage({
+                                id: 'Admin.Throttling.Custom.Throttling.policy.add.field.description',
+                                defaultMessage: 'Description',
+                            })}
                             fullWidth
                             variant='outlined'
                             value={description}
@@ -330,7 +336,10 @@ function AddEdit(props) {
                         <TextField
                             margin='dense'
                             name='keyTemplate'
-                            label='Key Template'
+                            label={intl.formatMessage({
+                                id: 'Admin.Throttling.Custom.Throttling.policy.add.field.key.template',
+                                defaultMessage: 'Key Template',
+                            })}
                             fullWidth
                             required
                             variant='outlined'
@@ -354,7 +363,10 @@ function AddEdit(props) {
                             )}
                         />
                         <FormHelperText sx={(theme) => ({ color: green[600], ml: 1, fontSize: theme.spacing(1.6) })}>
-                            Eg: $userId:$apiContext:$apiVersion
+                            <FormattedMessage
+                                id='Admin.Throttling.Custom.policy.add.key.template.helper.text'
+                                defaultMessage='Eg: $userId:$apiContext:$apiVersion'
+                            />
                         </FormHelperText>
                     </Grid>
                     <Grid item xs={12} md={12} lg={12}>

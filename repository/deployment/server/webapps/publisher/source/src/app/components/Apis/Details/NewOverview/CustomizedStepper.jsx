@@ -19,6 +19,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Button from '@mui/material/Button';
 import Box from '@mui/material/Box';
 import AuthManager from 'AppData/AuthManager';
+import CONSTS from 'AppData/Constants';
 import Typography from '@mui/material/Typography';
 import LinkIcon from '@mui/icons-material/Link';
 import API from 'AppData/api';
@@ -157,9 +158,12 @@ export default function CustomizedStepper() {
     const [api, updateAPI] = useAPI();
     const [isUpdating, setUpdating] = useState(false);
     const [deploymentsAvailable, setDeploymentsAvailable] = useState(false);
+    const [isEndpointSecurityConfigured, setIsEndpointSecurityConfigured] = useState(false);
     const isPrototypedAvailable = api.apiType !== API.CONSTS.APIProduct && api.endpointConfig !== null
-    && api.endpointConfig.implementation_status === 'prototyped';
-    const isEndpointAvailable = api.endpointConfig !== null;
+        && api.endpointConfig.implementation_status === 'prototyped';
+    const isEndpointAvailable = api.subtypeConfiguration?.subtype === 'AIAPI'
+        ? (api.primaryProductionEndpointId !== null || api.primarySandboxEndpointId !== null)
+        : api.endpointConfig !== null;
     const isTierAvailable = api.policies.length !== 0;
     const lifecycleState = api.isAPIProduct() ? api.state : api.lifeCycleStatus;
     const isPublished = lifecycleState === 'PUBLISHED';
@@ -171,6 +175,8 @@ export default function CustomizedStepper() {
     const securityScheme = [...api.securityScheme];
     const isMutualSslOnly = securityScheme.length === 2 && securityScheme.includes('mutualssl')
     && securityScheme.includes('mutualssl_mandatory');
+    const isSubValidationDisabled = api.policies 
+    && api.policies.length === 1 && api.policies[0].includes(CONSTS.DEFAULT_SUBSCRIPTIONLESS_PLAN);
     let devportalUrl = settings ? `${settings.devportalUrl}/apis/${api.id}/overview` : '';
     const intl = useIntl();
     // TODO: tmkasun need to handle is loading
@@ -178,7 +184,7 @@ export default function CustomizedStepper() {
         // TODO: tmkasun need to handle is loading
         devportalUrl = settings ? `${settings.devportalUrl}/apis/${api.id}/overview?tenant=${tenantDomain}` : '';
     }
-    const steps = (api.isWebSocket() || api.isGraphql() || api.isAsyncAPI())
+    const steps = (api.isWebSocket() || api.isGraphql() || api.isAsyncAPI() || api.gatewayVendor !== 'wso2')
         ? ['Develop', 'Deploy', 'Publish'] : ['Develop', 'Deploy', 'Test', 'Publish'];
     const forceComplete = [];
     if (isPublished) {
@@ -186,7 +192,7 @@ export default function CustomizedStepper() {
     }
     let activeStep = 0;
     if (api && (api.type === 'WEBSUB' || isEndpointAvailable)
-        && (isTierAvailable || isMutualSslOnly) && !deploymentsAvailable) {
+        && !deploymentsAvailable) {
         activeStep = 1;
     } else if ((api && !isEndpointAvailable && api.type !== 'WEBSUB')
         || (api && !isMutualSslOnly && !isTierAvailable)) {
@@ -223,6 +229,49 @@ export default function CustomizedStepper() {
         });
     }, []);
 
+    useEffect(() => {
+        const checkEndpointSecurity = async () => {
+            try {
+                const hasProductionEndpoint = !!api.primaryProductionEndpointId;
+                const hasSandboxEndpoint = !!api.primarySandboxEndpointId;
+                let isProductionSecure = false;
+                let isSandboxSecure = false;
+
+                if (hasProductionEndpoint) {
+                    if (api.primaryProductionEndpointId === CONSTS.DEFAULT_ENDPOINT_ID.PRODUCTION) {
+                        isProductionSecure = !!api.endpointConfig?.endpoint_security?.production;
+                    } else {
+                        const endpoint = await API.getApiEndpoint(api.id, api.primaryProductionEndpointId);
+                        isProductionSecure = !!endpoint?.body?.endpointConfig?.endpoint_security?.production;
+                    }
+                }
+
+                if (hasSandboxEndpoint) {
+                    if (api.primarySandboxEndpointId === CONSTS.DEFAULT_ENDPOINT_ID.SANDBOX) {
+                        isSandboxSecure = !!api.endpointConfig?.endpoint_security?.sandbox;
+                    } else {
+                        const endpoint = await API.getApiEndpoint(api.id, api.primarySandboxEndpointId);
+                        isSandboxSecure = !!endpoint?.body?.endpointConfig?.endpoint_security?.sandbox;
+                    }
+                }
+
+                if (hasProductionEndpoint && hasSandboxEndpoint) {
+                    setIsEndpointSecurityConfigured(isProductionSecure && isSandboxSecure);
+                } else if (hasProductionEndpoint) {
+                    setIsEndpointSecurityConfigured(isProductionSecure);
+                } else if (hasSandboxEndpoint) {
+                    setIsEndpointSecurityConfigured(isSandboxSecure);
+                } else {
+                    setIsEndpointSecurityConfigured(false);
+                }
+            } catch (error) {
+                console.error('Error checking endpoint security:', error);
+                setIsEndpointSecurityConfigured(false);
+            }
+        };
+        checkEndpointSecurity();
+    }, [api]);
+
     /**
  * Update the LifeCycle state of the API
  *
@@ -238,16 +287,61 @@ export default function CustomizedStepper() {
                         if (error.response) {
                             Alert.error(error.response.body.description);
                         } else {
-                            Alert.error('Something went wrong while updating the API');
+                            Alert.error(intl.formatMessage({
+                                id: 'Apis.Details.LifeCycle.Policies.update.error',
+                                defaultMessage: 'Something went wrong while updating the API',
+                            }));
                         }
                         console.error(error);
                     });
-                Alert.info('Lifecycle state updated successfully');
+                Alert.info(intl.formatMessage({
+                    id: 'Apis.Details.LifeCycle.Policies.update.success',
+                    defaultMessage: 'Lifecycle state updated successfully',
+                }));
             })
             .finally(() => setUpdating(false))
             .catch((errorResponse) => {
-                console.log(errorResponse);
-                Alert.error(JSON.stringify(errorResponse.message));
+                if (errorResponse.response?.body?.code === 903300) {
+                    Alert.error(
+                        <Box sx={{ width: '100%' }}>
+                            <Typography>
+                                <FormattedMessage
+                                    id='Apis.Details.LifeCycle.Policies.update.error.governance'
+                                    defaultMessage={'One or more governance policies have been violated. '
+                                    + 'Please try using the publish option in the Lifecycle page for more details.'}
+                                />
+                            </Typography>
+                            <Box sx={{ 
+                                display: 'flex', 
+                                justifyContent: 'flex-end',
+                                mt: 1
+                            }}>
+                                <Link
+                                    component={RouterLink}
+                                    to={`/apis/${api.id}/lifecycle`}
+                                    sx={{
+                                        color: 'inherit',
+                                        fontWeight: 600,
+                                        textDecoration: 'none',
+                                        transition: 'all 0.3s',
+                                        '&:hover': {
+                                            transform: 'translateY(-2px)',
+                                            textShadow: '0px 1px 2px rgba(0,0,0,0.2)',
+                                        },
+                                    }}
+                                >
+                                    <FormattedMessage
+                                        id='Apis.Details.LifeCycle.Policies.update.error.governance.link'
+                                        defaultMessage='Go to Lifecycle page'
+                                    />
+                                </Link>
+                            </Box>
+                        </Box>
+                    );
+                } else {
+                    console.log(errorResponse);
+                    Alert.error(JSON.stringify(errorResponse.message));
+                }
             });
     }
 
@@ -419,9 +513,16 @@ export default function CustomizedStepper() {
     || (!api.isAPIProduct() && !isEndpointAvailable)
     || (!isMutualSslOnly && !isTierAvailable)
     || (api.type !== 'HTTP' && api.type !== 'SOAP' && api.type !== 'APIPRODUCT');
-    const isDeployLinkDisabled = (((api.type !== 'WEBSUB' && !isEndpointAvailable))
-    || (!isMutualSslOnly && !isTierAvailable)
-    || api.workflowStatus === 'CREATED' || lifecycleState === 'RETIRED');
+    const isDeployLinkDisabled =
+        (api.type !== 'WEBSUB' &&
+            !(
+                isEndpointAvailable &&
+                (api.subtypeConfiguration?.subtype === 'AIAPI'
+                    ? isEndpointSecurityConfigured
+                    : true)
+            )) ||
+        api.workflowStatus === 'CREATED' ||
+        lifecycleState === 'RETIRED';
     let deployLinkToolTipTitle = '';
     if (lifecycleState === 'RETIRED') {
         deployLinkToolTipTitle = intl.formatMessage({
@@ -482,11 +583,18 @@ export default function CustomizedStepper() {
                                                     style={{ marginLeft: '2px' }}
                                                 >
                                                     <Grid item>
-                                                        {isEndpointAvailable ? (
-                                                            <CheckIcon className={classes.iconTrue} />
-                                                        ) : (
-                                                            <CloseIcon className={classes.iconFalse} />
-                                                        )}
+                                                        {isEndpointAvailable && (
+                                                            api.subtypeConfiguration?.subtype === 'AIAPI'
+                                                                ? isEndpointSecurityConfigured
+                                                                : true
+                                                        ) 
+                                                            ? (
+                                                                <CheckIcon className={classes.iconTrue} />
+                                                            ) 
+                                                            : (
+                                                                <CloseIcon className={classes.iconFalse} />
+                                                            )
+                                                        }
                                                     </Grid>
                                                     <Box ml={1} mb={1}>
                                                         <Grid item>
@@ -498,53 +606,9 @@ export default function CustomizedStepper() {
                                                             >
                                                                 <Typography variant='h6'>
                                                                     <FormattedMessage
-                                                                        id='Apis.Details.Overview.
-                                                                        CustomizedStepper.Endpoint'
+                                                                        id={'Apis.Details.Overview.'
+                                                                            + 'CustomizedStepper.Endpoint'}
                                                                         defaultMessage=' Endpoint'
-                                                                    />
-                                                                </Typography>
-                                                                <Box ml={1}>
-                                                                    <LinkIcon
-                                                                        color='primary'
-                                                                        fontSize='small'
-                                                                    />
-                                                                </Box>
-                                                            </Link>
-                                                        </Grid>
-                                                    </Box>
-                                                </Grid>
-                                            </Box>
-                                        )}
-                                        {(api.gatewayVendor === 'wso2') && (
-                                            <Box ml={6}>
-                                                <Grid
-                                                    container
-                                                    direction='row'
-                                                    justifyContent='center'
-                                                    style={{ marginLeft: '2px' }}
-                                                >
-                                                    <Grid item>
-                                                        {isTierAvailable ? (
-                                                            <CheckIcon className={classes.iconTrue} />
-                                                        ) : (
-                                                            <CloseIcon className={classes.iconFalse} />
-                                                        )}
-                                                    </Grid>
-                                                    <Box ml={1}>
-                                                        <Grid item>
-                                                            <Link
-                                                                underline='none'
-                                                                component={RouterLink}
-                                                                className={classes.pageLinks}
-                                                                to={api.isAPIProduct()
-                                                                    ? '/api-products/' + api.id + '/subscriptions'
-                                                                    : '/apis/' + api.id + '/subscriptions'}
-                                                            >
-                                                                <Typography variant='h6'>
-                                                                    <FormattedMessage
-                                                                        id={'Apis.Details.Overview.CustomizedStepper' +
-                                                                            '.Tier'}
-                                                                        defaultMessage=' Business Plan'
                                                                     />
                                                                 </Typography>
                                                                 <Box ml={1}>
@@ -613,8 +677,10 @@ export default function CustomizedStepper() {
                                 )}
                                 {label === 'Test' && (
                                     <Tooltip
-                                        title={lifecycleState === 'RETIRED' ? 'Cannot use test option while API'
-                                            + ' is in retired state' : ''}
+                                        title={lifecycleState === 'RETIRED' ? intl.formatMessage({
+                                            id: 'Apis.Details.Overview.CustomizedStepper.ToolTip.cannot.test',
+                                            defaultMessage: 'Cannot use test option while API is in retired state',
+                                        }) : ''}
                                         placement='bottom'
                                     >
                                         <Grid
@@ -654,9 +720,56 @@ export default function CustomizedStepper() {
                                     </Tooltip>
                                 )}
                                 {label === 'Publish' && (
-                                    <>
-                                        {finalLifecycleState(lifecycleState)}
-                                    </>
+                                    <div>
+                                        {(api.gatewayVendor === 'wso2') && !isSubValidationDisabled && (
+                                            <Box ml={1} mb={1}>
+                                                <Grid
+                                                    container
+                                                    direction='row'
+                                                    justifyContent='center'
+                                                    alignItems='center'
+                                                    style={{ marginLeft: '2px' }}
+                                                >
+                                                    <Grid item>
+                                                        {isTierAvailable ? (
+                                                            <CheckIcon className={classes.iconTrue} />
+                                                        ) : (
+                                                            <CloseIcon className={classes.iconFalse} />
+                                                        )}
+                                                    </Grid>
+                                                    <Box ml={1}>
+                                                        <Grid item>
+                                                            <Link
+                                                                underline='none'
+                                                                component={RouterLink}
+                                                                className={classes.pageLinks}
+                                                                to={api.isAPIProduct()
+                                                                    ? '/api-products/' + api.id + '/subscriptions'
+                                                                    : '/apis/' + api.id + '/subscriptions'}
+                                                            >
+                                                                <Typography variant='h6'>
+                                                                    <FormattedMessage
+                                                                        id={'Apis.Details.Overview.CustomizedStepper' +
+                                                                            '.Tier'}
+                                                                        defaultMessage=' Business Plan'
+                                                                    />
+                                                                </Typography>
+                                                                <Box ml={1}>
+                                                                    <LinkIcon
+                                                                        color='primary'
+                                                                        fontSize='small'
+                                                                    />
+                                                                </Box>
+                                                            </Link>
+                                                        </Grid>
+                                                    </Box>
+                                                </Grid>
+                                            </Box>
+                                        )}
+                                        <>
+                                            {finalLifecycleState(lifecycleState)}
+                                        </>
+                                    </div>
                                 )}
                             </StepLabel>
                         </Step>

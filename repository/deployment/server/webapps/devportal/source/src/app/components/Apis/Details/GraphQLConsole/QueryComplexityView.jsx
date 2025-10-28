@@ -173,7 +173,7 @@ export default function QueryComplexityView() {
                 <Divider />
                 <div
                     className={classes.root}
-                    style={{ maxHeight: '740px', overflow: 'scroll' }}
+                    style={{ maxHeight: '704px', overflow: 'scroll' }}
                 >
                     <div>
                         {typelist.map((res) => (
@@ -198,7 +198,7 @@ export default function QueryComplexityView() {
                                         <div className={classes.row}>
                                             <div className={classes.column}>
                                                 {respond.field}
-                                                {':'}
+                                                &lsquo;&#58;&rsquo;
                                             </div>
                                             <div className={classes.column}>
                                                 {respond.complexityValue}

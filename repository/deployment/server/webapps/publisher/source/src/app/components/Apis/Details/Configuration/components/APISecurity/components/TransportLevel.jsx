@@ -45,6 +45,8 @@ import {
     DEFAULT_API_SECURITY_OAUTH2,
     API_SECURITY_BASIC_AUTH,
     API_SECURITY_API_KEY,
+    API_SECURITY_KEY_TYPE_PRODUCTION,
+    API_SECURITY_KEY_TYPE_SANDBOX
 } from './apiSecurityConstants';
 
 const PREFIX = 'TransportLevel';
@@ -92,35 +94,48 @@ const Root = styled('div')((
  */
 function TransportLevel(props) {
     const {
-        haveMultiLevelSecurity, securityScheme, configDispatcher, intl, id, api,
+        haveMultiLevelSecurity, securityScheme, configDispatcher, intl, id, api, componentValidator,
     } = props;
     const isMutualSSLEnabled = securityScheme.includes(API_SECURITY_MUTUAL_SSL);
     const [apiFromContext] = useAPI();
-    const [clientCertificates, setClientCertificates] = useState([]);
+    const [productionClientCertificates, setProductionClientCertificates] = useState([]);
+    const [sandboxClientCertificates, setSandboxClientCertificates] = useState([]);
 
 
     /**
      * Method to upload the certificate content by calling the rest api.
      *
      * @param {string} certificate The certificate needs to be associated with the API
+     * @param {string} keyType The key type of the certificate. (whether production or sandbox)
      * @param {string} policy The tier to be used for the certificate.
      * @param {string} alias The alias of the certificate to be deleted.
      *
      * */
-    const saveClientCertificate = (certificate, policy, alias) => {
-        return API.addClientCertificate(id, certificate, policy, alias).then((resp) => {
+    const saveClientCertificate = (certificate, keyType, policy, alias) => {
+        return API.addClientCertificate(id, certificate, keyType, policy, alias).then((resp) => {
             if (resp.status === 201) {
                 Alert.info(intl.formatMessage({
                     id: 'Apis.Details.Configuration.components.APISecurity.TranportLevel.certificate.add.success',
                     defaultMessage: 'Certificate added successfully',
                 }));
-                const tmpCertificates = [...clientCertificates];
-                tmpCertificates.push({
-                    apiId: resp.obj.apiId,
-                    alias: resp.obj.alias,
-                    tier: resp.obj.tier,
-                });
-                setClientCertificates(tmpCertificates);
+                if (keyType === API_SECURITY_KEY_TYPE_SANDBOX) {
+                    const tmpSandboxCertificates = [...sandboxClientCertificates];
+                    tmpSandboxCertificates.push({
+                        apiId: resp.obj.apiId,
+                        alias: resp.obj.alias,
+                        tier: resp.obj.tier,
+                    });
+                    setSandboxClientCertificates(tmpSandboxCertificates);
+
+                } else {
+                    const tmpProductionCertificates = [...productionClientCertificates];
+                    tmpProductionCertificates.push({
+                        apiId: resp.obj.apiId,
+                        alias: resp.obj.alias,
+                        tier: resp.obj.tier,
+                    });
+                    setProductionClientCertificates(tmpProductionCertificates);
+                }
             }
         }).catch((error) => {
             if (error.response) {
@@ -137,19 +152,32 @@ function TransportLevel(props) {
     /**
      * Method to delete the selected certificate.
      *
+     * @param {string} keyType The key type of the certificate to be deleted.
      * @param {string} alias The alias of the certificate to be deleted.
      * */
-    const deleteClientCertificate = (alias) => {
-        return API.deleteClientCertificate(alias, id).then((resp) => {
-            setClientCertificates(() => {
-                if (resp.status === 200) {
-                    return clientCertificates.filter((cert) => {
-                        return cert.alias !== alias;
-                    });
-                } else {
-                    return -1;
-                }
-            });
+    const deleteClientCertificate = (keyType, alias) => {
+        return API.deleteClientCertificate(keyType, alias, id).then((resp) => {
+            if (keyType === API_SECURITY_KEY_TYPE_SANDBOX) {
+                setSandboxClientCertificates(() => {
+                    if (resp.status === 200) {
+                        return sandboxClientCertificates.filter((cert) => {
+                            return cert.alias !== alias;
+                        });
+                    } else {
+                        return -1;
+                    }
+                });
+            } else {
+                setProductionClientCertificates(() => {
+                    if (resp.status === 200) {
+                        return productionClientCertificates.filter((cert) => {
+                            return cert.alias !== alias;
+                        });
+                    } else {
+                        return -1;
+                    }
+                });
+            }
             Alert.info(intl.formatMessage({
                 id: 'Apis.Details.Configuration.components.APISecurity.TranportLevel.certificate.delete.success',
                 defaultMessage: 'Certificate Deleted Successfully',
@@ -182,12 +210,20 @@ function TransportLevel(props) {
 
     // Get the client certificates from backend.
     useEffect(() => {
-        API.getAllClientCertificates(id).then((resp) => {
-            const { certificates } = resp.obj;
-            setClientCertificates(certificates);
+        API.getAllClientCertificatesOfGivenKeyType(API_SECURITY_KEY_TYPE_PRODUCTION, id).then((resp) => {
+            const { certificates: productionCertificates } = resp.obj;
+            setProductionClientCertificates(productionCertificates);
         }).catch((err) => {
             console.error(err);
-            setClientCertificates([]);
+            setProductionClientCertificates([]);
+        });
+
+        API.getAllClientCertificatesOfGivenKeyType(API_SECURITY_KEY_TYPE_SANDBOX, id).then((resp) => {
+            const { certificates: sandboxCertificates } = resp.obj;
+            setSandboxClientCertificates(sandboxCertificates);
+        }).catch((err) => {
+            console.error(err);
+            setSandboxClientCertificates([]);
         });
     }, []);
 
@@ -230,27 +266,30 @@ function TransportLevel(props) {
                     <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                         <Typography className={classes.subHeading} variant='h6' component='h4'>
                             <FormattedMessage
-                                id='Apis.Details.Configuration.Components.APISecurity.Components.
-                                    TransportLevel.transport.level.security'
+                                id={'Apis.Details.Configuration.Components.APISecurity.Components.'
+                                    + 'TransportLevel.transport.level.security'}
                                 defaultMessage='Transport Level Security'
                             />
                         </Typography>
                     </AccordionSummary>
                     <AccordionDetails className={classes.expansionPanelDetails}>
-                        <Transports api={api} configDispatcher={configDispatcher} securityScheme={securityScheme} />
-                        <FormControlLabel
-                            control={(
-                                <Checkbox
-                                    disabled={isRestricted(['apim:api_create'], apiFromContext)}
-                                    checked={isMutualSSLEnabled}
-                                    onChange={handleMutualSSLChange}
-                                    color='primary'
-                                    id='mutual-ssl-checkbox'
-                                />
-                            )}
-                            label='Mutual SSL'
-                        />
-                        {isMutualSSLEnabled && (
+                        <Transports api={api} configDispatcher={configDispatcher} 
+                            securityScheme={securityScheme} componentValidator={componentValidator} />
+                        {componentValidator.includes('transportsMutualSSL') && 
+                            <FormControlLabel
+                                control={(
+                                    <Checkbox
+                                        disabled={isRestricted(['apim:api_create'], apiFromContext)}
+                                        checked={isMutualSSLEnabled}
+                                        onChange={handleMutualSSLChange}
+                                        color='primary'
+                                        id='mutual-ssl-checkbox'
+                                    />
+                                )}
+                                label='Mutual SSL'
+                            />
+                        }
+                        {(isMutualSSLEnabled && componentValidator.includes('transportsMutualSSL')) && (
                             <FormControl component='fieldset'>
                                 <RadioGroup
                                     aria-label='HTTP security SSL mandatory selection'
@@ -274,7 +313,11 @@ function TransportLevel(props) {
                                                 color='primary'
                                             />
                                         )}
-                                        label='Mandatory'
+                                        label={intl.formatMessage({
+                                            id: 'Apis.Details.Configuration.Components.APISecurity.Components.'
+                                                + 'TransportLevel.transport.level.security.mutual.ssl.mandatory',
+                                            defaultMessage: 'Mandatory',
+                                        })}
                                         labelPlacement='end'
                                     />
                                     <FormControlLabel
@@ -286,7 +329,11 @@ function TransportLevel(props) {
                                                 color='primary'
                                             />
                                         )}
-                                        label='Optional'
+                                        label={intl.formatMessage({
+                                            id: 'Apis.Details.Configuration.Components.APISecurity.Components.'
+                                                + 'TransportLevel.transport.level.security.mutual.ssl.optional',
+                                            defaultMessage: 'Optional',
+                                        })}
                                         labelPlacement='end'
                                     />
                                 </RadioGroup>
@@ -299,14 +346,16 @@ function TransportLevel(props) {
                                 </FormHelperText>
                             </FormControl>
                         )}
-                        {(isMutualSSLEnabled && (!api.advertiseInfo || !api.advertiseInfo.advertised)) && (
+                        {(isMutualSSLEnabled && (!api.advertiseInfo || !api.advertiseInfo.advertised)) &&
+                            componentValidator.includes('transportsMutualSSL') && (
                             // TODO:
                             // This is half baked!!!
                             // Refactor the Certificate component to share its capabilities in here and
                             // endpoints page ~tmkb
                             <Certificates
                                 isMutualSSLEnabled={isMutualSSLEnabled}
-                                certificates={clientCertificates}
+                                productionCertificates={productionClientCertificates}
+                                sandboxCertificates={sandboxClientCertificates}
                                 uploadCertificate={saveClientCertificate}
                                 deleteCertificate={deleteClientCertificate}
                                 apiId={id}

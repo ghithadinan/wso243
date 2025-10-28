@@ -60,6 +60,10 @@ function Onboarding() {
         const inlineContent = getSampleOpenAPI();
         try {
             await ServiceCatalog.addService(serviceMetadata, inlineContent);
+            Alert.info(intl.formatMessage({
+                id: 'ServiceCatalog.Listing.Onboarding.add.sample.success',
+                defaultMessage: 'Sample Service added successfully!',
+            }));
         } catch (error) {
             setDeployStatus({ inprogress: false, completed: false, error });
             console.error(error);
@@ -69,10 +73,6 @@ function Onboarding() {
             }));
         }
         setDeployStatus({ inprogress: false, completed: true, error: false });
-        Alert.info(intl.formatMessage({
-            id: 'ServiceCatalog.Listing.Onboarding.add.sample.success',
-            defaultMessage: 'Sample Service added successfully!',
-        }));
     };
     if (deployStatus.completed && !deployStatus.error) {
         const url = '/service-catalog';
@@ -116,7 +116,7 @@ function Onboarding() {
                         size='large'
                         variant='outlined'
                         color='primary'
-                        href='https://apim.docs.wso2.com/en/4.2.0/design/create-api/create-an-api-using-a-service/'
+                        href={Configurations.app.docUrl + 'design/create-api/create-an-api-using-a-service/'}
                         target='_blank'
                         rel='noopener noreferrer'
                         endIcon={<LaunchIcon style={{ fontSize: 15 }} />}

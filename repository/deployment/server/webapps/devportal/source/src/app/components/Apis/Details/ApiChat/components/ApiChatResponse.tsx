@@ -17,7 +17,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import Accordion from '@mui/material/Accordion';
 import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
@@ -36,8 +36,14 @@ import MonacoEditor from 'react-monaco-editor';
 import xmlFormat from 'xml-formatter';
 import Utils from 'AppData/Utils';
 import CustomIcon from 'AppComponents/Shared/CustomIcon';
+import IconButton from '@mui/material/IconButton';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 
 const PREFIX = 'ApiChatResponse';
+const CONTENT_TYPE: string = 'Content-Type';
+const APPLICATION_JSON: string = 'application/json';
+const APPLICATION_XML: string = 'application/xml';
+const TEXT_PLAIN: string = 'text/plain';
 
 const classes = {
     finalOutcomeContent: `${PREFIX}-finalOutcomeContent`,
@@ -149,6 +155,7 @@ const ApiChatResponse: React.FC<ApiChatResponseProps> = ({
     isAgentTerminating,
     isExecutionError,
 }) => {
+    const intl = useIntl();
     const [user, setUser] = useState('You');
 
     useEffect(() => {
@@ -158,6 +165,51 @@ const ApiChatResponse: React.FC<ApiChatResponseProps> = ({
         }
     }, []);
 
+    const copyText = intl.formatMessage({
+        id: 'Apis.Details.ApiChat.components.ApiChatResponse.CopyToClipboard.copyText',
+        defaultMessage: 'Copy cURL to Clipboard',
+    });
+    const copiedText = intl.formatMessage({
+        id: 'Apis.Details.ApiChat.components.ApiChatResponse.CopyToClipboard.copiedText',
+        defaultMessage: 'Copied',
+    });
+
+    const [copyBtnText, setCopyBtnText] = useState(copyText);
+
+    const handleTooltipClose = () => {
+        setCopyBtnText(copyText);
+    };
+
+    const handleCurlCopyClick = (curl: string) => {
+        setCopyBtnText(copiedText);
+        navigator.clipboard.writeText(curl);
+    };
+
+    /**
+     * Infer the content type of the response.
+     *
+     * @param {string} str Response body.
+     * @returns {string} Content type of the response.
+     */
+    const inferContentType = (str: string) => {
+        const trimmedStr = str.trim();
+        const xmlRegex = /^\s*<[^>]+>/;
+        const jsonRegex = /^[\\{\\[](.*?)[\\}\]]$/;
+
+        if (xmlRegex.test(trimmedStr)) {
+            return APPLICATION_XML;
+        }
+        if (jsonRegex.test(trimmedStr)) {
+            try {
+                JSON.parse(trimmedStr);
+                return APPLICATION_JSON;
+            } catch (error) {
+                // Handle potential invalid JSON structure
+            }
+        }
+        return TEXT_PLAIN;
+    };
+
     /**
      * Renders the execution result body.
      *
@@ -165,14 +217,22 @@ const ApiChatResponse: React.FC<ApiChatResponseProps> = ({
      * @returns {JSX.Element} Execution result body to render.
      */
     const renderExecutionResultBody = (executionResult: any) => {
-        const contentType = executionResult.headers.get('Content-Type');
-        if (contentType.includes('application/json') && executionResult.body !== '') {
+        // Determine content type
+        let contentType = APPLICATION_JSON;
+        const noContentType = executionResult.headers && Object.keys(executionResult.headers).length === 0;
+        if (noContentType) {
+            contentType = inferContentType(executionResult.body);
+        } else {
+            contentType = executionResult.headers[CONTENT_TYPE];
+        }
+
+        if (contentType.includes(APPLICATION_JSON) && executionResult.body !== '') {
             return (
                 <MonacoEditor
                     width='100%'
                     height='200'
                     language='json'
-                    value={JSON.stringify(executionResult.body, null, 2)}
+                    value={JSON.stringify(JSON.parse(executionResult.body), null, 2)}
                     options={{
                         readOnly: true,
                         minimap: { enabled: false },
@@ -181,7 +241,7 @@ const ApiChatResponse: React.FC<ApiChatResponseProps> = ({
                     }}
                 />
             );
-        } else if (contentType.includes('application/xml') && executionResult.body !== '') {
+        } else if (contentType.includes(APPLICATION_XML) && executionResult.body !== '') {
             const formattedMessage = xmlFormat(executionResult.body);
             return (
                 <MonacoEditor
@@ -245,28 +305,51 @@ const ApiChatResponse: React.FC<ApiChatResponseProps> = ({
                                         <AccordionSummary
                                             expandIcon={<ExpandMoreIcon />}
                                         >
-                                            <>
-                                                {(executionResult.code >= 200 && executionResult.code < 300) ? (
-                                                    <Chip
-                                                        icon={<CheckCircleIcon color='success' />}
-                                                        label={executionResult.code}
-                                                        color='success'
-                                                        variant='outlined'
-                                                        size='small'
-                                                    />
-                                                ) : (
-                                                    <Chip
-                                                        icon={<DangerousIcon color='error' />}
-                                                        label={executionResult.code}
-                                                        color='error'
-                                                        variant='outlined'
-                                                        size='small'
-                                                    />
-                                                )}
-                                                <Typography variant='body1' ml={2} sx={{ alignContent: 'center' }}>
-                                                    {'Executed ' + executionResult.method + ' ' + executionResult.path}
-                                                </Typography>
-                                            </>
+                                            <Box display='flex' justifyContent='space-between' alignItems='center' width='100%'>
+                                                <Box display='flex' alignItems='center'>
+                                                    {(executionResult.code >= 200 && executionResult.code < 300) ? (
+                                                        <Chip
+                                                            icon={<CheckCircleIcon color='success' />}
+                                                            label={executionResult.code}
+                                                            color='success'
+                                                            variant='outlined'
+                                                            size='small'
+                                                        />
+                                                    ) : (
+                                                        <Chip
+                                                            icon={<DangerousIcon color='error' />}
+                                                            label={executionResult.code}
+                                                            color='error'
+                                                            variant='outlined'
+                                                            size='small'
+                                                        />
+                                                    )}
+                                                    <Typography variant='body1' ml={2} sx={{ alignContent: 'center' }}>
+                                                        {'Executed ' + executionResult.method + ' ' + executionResult.path}
+                                                    </Typography>
+                                                </Box>
+                                                <Box display='flex' alignItems='center'>
+                                                    {executionResult.curlCommand != null && (
+                                                        <Tooltip
+                                                            title={copyBtnText}
+                                                            onClose={handleTooltipClose}
+                                                            placement='top-end'
+                                                        >
+                                                            <IconButton
+                                                                id='request-curl-copy'
+                                                                size='small'
+                                                                onClick={(e: any) => {
+                                                                    handleCurlCopyClick(executionResult.curlCommand);
+                                                                    e.stopPropagation();
+                                                                }}
+                                                                sx={{ mr: 1 }}
+                                                            >
+                                                                <ContentCopyIcon fontSize='inherit' />
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                    )}
+                                                </Box>
+                                            </Box>
                                         </AccordionSummary>
                                         <AccordionDetails>
                                             <Typography variant='body1'>

@@ -58,7 +58,7 @@
             Settings.app.customUrl.tenantDomain = '<%=Util.getCustomUrlEnabledDomain(request)%>';
         </script>
         <script src="<%= context%>/site/public/fonts/iconfont/MaterialIcons.js"></script>
-        <script src="<%= context%>/site/public/dist/index.80a2c1b7779ea3609ea6.bundle.js"></script>
+        <script src="<%= context%>/site/public/dist/index.9a2ce8733ef18848cae3.bundle.js"></script>
         <link rel="stylesheet" href="<%= context%>/site/public/fonts/iconfont/material-icons.css">
         <link rel="stylesheet" href="<%= context%>/site/public/css/overrides.css">
     </body>

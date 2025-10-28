@@ -20,14 +20,15 @@ import React, { Component } from 'react';
 import { styled, useTheme } from '@mui/material/styles';
 import PropTypes from 'prop-types';
 
-import { isRestricted } from 'AppData/AuthManager';
+import AuthManager, { isRestricted } from 'AppData/AuthManager';
 import LifeCycleIcon from '@mui/icons-material/Autorenew';
 import StoreIcon from '@mui/icons-material/Store';
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import PolicyIcon from '@mui/icons-material/Policy';
 import CodeIcon from '@mui/icons-material/Code';
 import PersonPinCircleOutlinedIcon from '@mui/icons-material/PersonPinCircleOutlined';
 import ResourcesIcon from '@mui/icons-material/VerticalSplit';
-import { injectIntl, defineMessages } from 'react-intl';
+import { injectIntl, defineMessages, FormattedMessage } from 'react-intl';
 import {
     Redirect, Route, Switch, Link, matchPath,
 } from 'react-router-dom';
@@ -61,7 +62,7 @@ import Operations from './Operations/Operations';
 import APIOperations from './Resources/APIOperations';
 import APIProductOperations from './ProductResources/APIProductOperations';
 import ProductResourcesEdit from './ProductResources/ProductResourcesEdit';
-import Endpoints from './Endpoints/Endpoints';
+import Endpoint from './Endpoints';
 import Environments from './Environments/Environments';
 import Subscriptions from './Subscriptions/Subscriptions';
 import Comments from './Comments/Comments';
@@ -77,7 +78,9 @@ import Policies from './Policies/Policies';
 import ExternalStores from './ExternalStores/ExternalStores';
 import { APIProvider } from './components/ApiContext';
 import CreateNewVersion from './NewVersion/NewVersion';
+import ShareAPI from './ShareAPI/ShareAPI';
 import TryOutConsole from './TryOut/TryOutConsole';
+import Compliance from './APICompliance/Compliance';
 
 const PREFIX = 'index';
 
@@ -533,6 +536,7 @@ class Details extends Component {
      */
     getRevision() {
         const { api } = this.state;
+        const { intl } = this.props;
         const restApi = new API();
         const restApiProduct = new APIProduct();
         let isAPIProduct = false;
@@ -554,7 +558,10 @@ class Details extends Component {
                 this.setState({ allRevisions: result.body.list });
             })
             .catch(() => {
-                Alert.error('Something went wrong while getting the revisions!');
+                Alert.error(intl.formatMessage({
+                    id: 'Apis.Details.Index.get.revisions.error',
+                    defaultMessage: 'Something went wrong while getting the revisions!',
+                }));
             });
     }
 
@@ -563,6 +570,7 @@ class Details extends Component {
      */
     getDeployedEnv() {
         const { api } = this.state;
+        const { intl } = this.props;
         const restApi = new API();
         const restApiProduct = new APIProduct();
         let isAPIProduct = false;
@@ -582,7 +590,10 @@ class Details extends Component {
                 this.setState({ allEnvRevision: result.body.list });
             })
             .catch(() => {
-                Alert.error('Something went wrong while getting the revisions!');
+                Alert.error(intl.formatMessage({
+                    id: 'Apis.Details.Index.get.revisions.error',
+                    defaultMessage: 'Something went wrong while getting the revisions!',
+                }));
             });
     }
 
@@ -615,6 +626,7 @@ class Details extends Component {
      */
     updateAPI(_updatedProperties = {}) {
         const { api } = this.state;
+        const { intl } = this.props;
         let isAPIProduct = false;
         if (api.apiType === API.CONSTS.APIProduct) {
             isAPIProduct = true;
@@ -638,11 +650,23 @@ class Details extends Component {
         return promisedUpdate
             .then((updatedAPI) => {
                 if (isAPIProduct) {
-                    Alert.info(`${updatedAPI.name} API Product updated successfully`);
+                    Alert.info(intl.formatMessage({
+                        id: 'Apis.Details.index.api.product.update.success',
+                        defaultMessage: '{updatedAPIName} API Product updated successfully',
+                    },
+                    {
+                        updatedAPIName: updatedAPI.name,
+                    }));
                     this.setState({ api: updatedAPI });
                     return updatedAPI;
                 } else {
-                    Alert.info(`${updatedAPI.name} API updated successfully`);
+                    Alert.info(intl.formatMessage({
+                        id: 'Apis.Details.index.api.update.success',
+                        defaultMessage: '{updatedAPIName} API updated successfully',
+                    },
+                    {
+                        updatedAPIName: updatedAPI.name,
+                    }));
                     this.setState({ api: updatedAPI });
                     return updatedAPI;
                 }
@@ -650,7 +674,13 @@ class Details extends Component {
             .catch((error) => {
                 // TODO: Should log and handle the error case by the original callee ~tmkb
                 console.error(error);
-                Alert.error(`Something went wrong while updating the ${api.name} API!!`);
+                Alert.error(intl.formatMessage({
+                    id: 'Apis.Details.index.api.product.update.error',
+                    defaultMessage: 'Something went wrong while updating the {apiName} API!!',
+                },
+                {
+                    apiName: api.name,
+                }));
                 // Kinda force render,Resting API object to old one
                 this.setState({ api });
                 throw error;
@@ -685,6 +715,7 @@ class Details extends Component {
         const uuid = match.params.apiUUID || match.params.api_uuid || match.params.apiProdUUID;
         const pathPrefix = '/' + (isAPIProduct ? 'api-products' : 'apis') + '/' + uuid + '/';
         const redirectUrl = pathPrefix;
+        const readOnlyUser = AuthManager.isReadOnlyUser();
         const isAsyncAPI = api && (api.type === 'WS' || api.type === 'WEBSUB' || api.type === 'SSE'
             || api.type === 'ASYNC');
         if (apiNotFound) {
@@ -736,7 +767,8 @@ class Details extends Component {
                 >
                     <Box className={classes.LeftMenu}>
                         <nav name='secondaryNavigation' aria-label='secondary navigation'>
-                            <Link to={'/' + (isAPIProduct ? 'api-products' : 'apis') + '/'} aria-label='ALL APIs'>
+                            <Link to={'/' + (isAPIProduct ? 'api-products' : 'apis') + '/'}
+                                aria-label='ALL APIs'>
                                 <div className={classes.leftLInkMain}>
                                     <CustomIcon
                                         className={classes.customIcon}
@@ -756,8 +788,21 @@ class Details extends Component {
                                 head='valueOnly'
                                 id='left-menu-overview'
                             />
+                            {!isAPIProduct && !api.isGraphql() && !api.isSOAPToREST() && !api.isSOAP() && (
+                                <LeftMenuItem
+                                    text={intl.formatMessage({
+                                        id: 'Apis.Details.index.compliance',
+                                        defaultMessage: 'compliance',
+                                    })}
+                                    to={pathPrefix + 'compliance'}
+                                    Icon={<PolicyIcon />}
+                                    head='valueOnly'
+                                    id='left-menu-compliance'
+                                />
+                            )}
                             <Typography className={classes.headingText}>
-                                Develop
+                                <FormattedMessage id='Apis.Details.index.develop.title'
+                                    defaultMessage='Develop' />
                             </Typography>
                             <DevelopSectionMenu
                                 pathPrefix={pathPrefix}
@@ -765,11 +810,19 @@ class Details extends Component {
                                 api={api}
                                 getLeftMenuItemForResourcesByType={this.getLeftMenuItemForResourcesByType}
                                 getLeftMenuItemForDefinitionByType={this.getLeftMenuItemForDefinitionByType}
+                                componentValidator=
+                                    {settings && settings.gatewayFeatureCatalog
+                                        .gatewayFeatures[api.gatewayType ? api.gatewayType : 'wso2/synapse']}
                             />
                             <Divider />
                             {!isAPIProduct && (
                                 <>
-                                    <Typography className={classes.headingText}>Deploy</Typography>
+                                    <Typography className={classes.headingText}>
+                                        <FormattedMessage
+                                            id='Apis.Details.index.deploy.title'
+                                            defaultMessage='Deploy'
+                                        />
+                                    </Typography>
                                     <LeftMenuItem
                                         text={intl.formatMessage({
                                             id: 'Apis.Details.index.environments',
@@ -784,7 +837,12 @@ class Details extends Component {
                             )}
                             {isAPIProduct && (
                                 <>
-                                    <Typography className={classes.headingText}>Deploy</Typography>
+                                    <Typography className={classes.headingText}>
+                                        <FormattedMessage
+                                            id='Apis.Details.index.deploy.title'
+                                            defaultMessage='Deploy'
+                                        />
+                                    </Typography>
                                     <LeftMenuItem
                                         text={intl.formatMessage({
                                             id: 'Apis.Details.index.environments',
@@ -797,11 +855,19 @@ class Details extends Component {
                                     />
                                 </>
                             )}
-                            {(isAPIProduct || (!isAPIProduct && !api.isWebSocket() && !api.isGraphql()
-                                && !isAsyncAPI)) && (
+                            {!readOnlyUser && (isAPIProduct || (!isAPIProduct && !api.isWebSocket()
+                                && !api.isGraphql() && !isAsyncAPI)) &&
+                            (settings && settings.gatewayFeatureCatalog
+                                .gatewayFeatures[api.gatewayType ? api.gatewayType : 'wso2/synapse']
+                                .tryout.includes('tryout')) && (
                                 <div>
                                     <Divider />
-                                    <Typography className={classes.headingText}>Test</Typography>
+                                    <Typography className={classes.headingText}>
+                                        <FormattedMessage
+                                            id='Apis.Details.index.test.title'
+                                            defaultMessage='Test'
+                                        />
+                                    </Typography>
                                     <LeftMenuItem
                                         route='test-console'
                                         text={intl.formatMessage({
@@ -817,7 +883,12 @@ class Details extends Component {
                             {!isRestricted(['apim:api_publish'], api) && (
                                 <div>
                                     <Divider />
-                                    <Typography className={classes.headingText}>Publish</Typography>
+                                    <Typography className={classes.headingText}>
+                                        <FormattedMessage
+                                            id='Apis.Details.index.publish.title'
+                                            defaultMessage='Publish'
+                                        />
+                                    </Typography>
                                     <LeftMenuItem
                                         text={intl.formatMessage({
                                             id: 'Apis.Details.index.lifecycle',
@@ -888,7 +959,8 @@ class Details extends Component {
                                     />
                                     <Route
                                         path={Details.subPaths.API_DEFINITION}
-                                        component={() => <APIDefinition api={api} updateAPI={this.updateAPI} />}
+                                        component={() => <APIDefinition api={api}
+                                            updateAPI={this.updateAPI} />}
                                     />
                                     <Route
                                         path={Details.subPaths.WSDL}
@@ -904,7 +976,8 @@ class Details extends Component {
                                     />
                                     <Route
                                         path={Details.subPaths.ASYNCAPI_DEFINITION}
-                                        component={() => <APIDefinition api={api} updateAPI={this.updateAPI} />}
+                                        component={() => <APIDefinition api={api}
+                                            updateAPI={this.updateAPI} />}
                                     />
                                     <Route
                                         path={Details.subPaths.LIFE_CYCLE}
@@ -916,7 +989,8 @@ class Details extends Component {
                                     />
                                     <Route
                                         path={Details.subPaths.CONFIGURATION}
-                                        component={() => <DesignConfigurations api={api} updateAPI={this.updateAPI}/>}
+                                        component={() => <DesignConfigurations api={api}
+                                            updateAPI={this.updateAPI}/>}
                                     />
                                     <Route
                                         path={Details.subPaths.RUNTIME_CONFIGURATION}
@@ -928,11 +1002,13 @@ class Details extends Component {
                                     />
                                     <Route
                                         path={Details.subPaths.TOPICS}
-                                        component={() => <Topics api={api} updateAPI={this.updateAPI} />}
+                                        component={() => <Topics api={api}
+                                            updateAPI={this.updateAPI} />}
                                     />
                                     <Route
                                         path={Details.subPaths.CONFIGURATION_PRODUCT}
-                                        component={() => <DesignConfigurations api={api} updateAPI={this.updateAPI}/>}
+                                        component={() => <DesignConfigurations api={api}
+                                            updateAPI={this.updateAPI}/>}
                                     />
                                     <Route
                                         path={Details.subPaths.RUNTIME_CONFIGURATION_PRODUCT}
@@ -940,7 +1016,7 @@ class Details extends Component {
                                     />
                                     <Route
                                         path={Details.subPaths.ENDPOINTS}
-                                        component={() => <Endpoints api={api} />}
+                                        component={() => <Endpoint />}
                                     />
                                     <Route
                                         path={Details.subPaths.ENVIRONMENTS}
@@ -952,7 +1028,12 @@ class Details extends Component {
                                     />
                                     <Route
                                         path={Details.subPaths.OPERATIONS}
-                                        component={() => <Operations api={api} updateAPI={this.updateAPI} />}
+                                        component={() => <Operations api={api}
+                                            componentValidator={settings &&
+                                                settings.gatewayFeatureCatalog
+                                                    .gatewayFeatures
+                                                    [api.gatewayType ? api.gatewayType : 'wso2/synapse'].resources}
+                                            updateAPI={this.updateAPI} />}
                                     />
                                     <Route
                                         exact
@@ -969,8 +1050,12 @@ class Details extends Component {
                                         key={Details.subPaths.RESOURCES}
                                         component={APIOperations}
                                     />
-
-                                    <Route path={Details.subPaths.SCOPES} component={() => <Scope api={api} />} />
+                                    {settings && settings.gatewayFeatureCatalog
+                                        .gatewayFeatures[api.gatewayType ? api.gatewayType : 'wso2/synapse']
+                                        .localScopes.includes("operationScopes") &&
+                                        <Route path={Details.subPaths.SCOPES} component={() =>
+                                            <Scope api={api} />} />
+                                    }
                                     <Route
                                         path={Details.subPaths.DOCUMENTS}
                                         component={() => <Documents api={api} />}
@@ -979,16 +1064,24 @@ class Details extends Component {
                                         path={Details.subPaths.DOCUMENTS_PRODUCT}
                                         component={() => <Documents api={api} />}
                                     />
-                                    <Route
-                                        path={Details.subPaths.SUBSCRIPTIONS}
-                                        component={() => <Subscriptions api={api} updateAPI={this.updateAPI} />}
-                                    />
+                                    {settings && settings.gatewayFeatureCatalog
+                                        .gatewayFeatures[api.gatewayType ? api.gatewayType : 'wso2/synapse']
+                                        .subscriptions.includes("subscriptions") &&
+                                        <Route
+                                            path={Details.subPaths.SUBSCRIPTIONS}
+                                            component={() => <Subscriptions api={api}
+                                                updateAPI={this.updateAPI} />}
+                                        />
+                                    }
                                     <Route
                                         path={Details.subPaths.SUBSCRIPTIONS_PRODUCT}
-                                        component={() => <Subscriptions api={api} updateAPI={this.updateAPI} />}
+                                        component={() => <Subscriptions api={api}
+                                            updateAPI={this.updateAPI} />}
                                     />
-                                    <Route path={Details.subPaths.SECURITY} component={() => <Security api={api} />} />
-                                    <Route path={Details.subPaths.COMMENTS} component={() => <Comments api={api} />} />
+                                    <Route path={Details.subPaths.SECURITY} component={() =>
+                                        <Security api={api} />} />
+                                    <Route path={Details.subPaths.COMMENTS} component={() =>
+                                        <Comments api={api} />} />
                                     <Route
                                         path={Details.subPaths.BUSINESS_INFO}
                                         component={() => <BusinessInformation api={api} />}
@@ -1005,16 +1098,23 @@ class Details extends Component {
                                         path={Details.subPaths.PROPERTIES_PRODUCT}
                                         component={() => <Properties api={api} />}
                                     />
+                                    <Route path={Details.subPaths.SHARE} component={() => <ShareAPI
+                                        api={api} updateAPI={this.updateAPI} />} />
                                     <Route path={Details.subPaths.NEW_VERSION} component={() => <CreateNewVersion />} />
                                     <Route
                                         path={Details.subPaths.NEW_VERSION_PRODUCT}
                                         component={() => <CreateNewVersion />} />
 
-                                    <Route path={Details.subPaths.SUBSCRIPTIONS} component={() => <Subscriptions />} />
-                                    <Route
-                                        path={Details.subPaths.MONETIZATION}
-                                        component={() => <Monetization api={api} />}
-                                    />
+                                    <Route path={Details.subPaths.SUBSCRIPTIONS} component={() =>
+                                        <Subscriptions />} />
+                                    {settings && settings.gatewayFeatureCatalog
+                                        .gatewayFeatures[api.gatewayType ? api.gatewayType : 'wso2/synapse']
+                                        .monetization.includes("monetization") &&
+                                        <Route
+                                            path={Details.subPaths.MONETIZATION}
+                                            component={() => <Monetization api={api} />}
+                                        />
+                                    }
                                     <Route
                                         path={Details.subPaths.MONETIZATION_PRODUCT}
                                         component={() => <Monetization api={api} />}
@@ -1027,7 +1127,8 @@ class Details extends Component {
                                         path={Details.subPaths.TRYOUT_PRODUCT}
                                         component={() => <TryOutConsole apiObj={api} />}
                                     />
-                                    <Route path={Details.subPaths.EXTERNAL_STORES} component={ExternalStores} />
+                                    <Route path={Details.subPaths.EXTERNAL_STORES}
+                                        component={ExternalStores} />
                                     <Route
                                         path={Details.subPaths.COMMENTS}
                                         component={() => <Comments apiObj={api} />}
@@ -1035,6 +1136,22 @@ class Details extends Component {
                                     <Route
                                         path={Details.subPaths.POLICIES}
                                         component={() => <Policies api={api} />}
+                                    />
+                                    <Route
+                                        path={Details.subPaths.COMPLIANCE}
+                                        component={() => {
+                                            return (
+                                                !isAPIProduct &&
+                                                !api.isGraphql() &&
+                                                !api.isSOAPToREST() &&
+                                                !api.isSOAP() ? 
+                                                    (
+                                                        <Compliance api={api} />
+                                                    ) : (
+                                                        <ResourceNotFound />
+                                                    )
+                                            )
+                                        }}
                                     />
                                 </Switch>
                             </div>
@@ -1086,6 +1203,7 @@ Details.subPaths = {
     PROPERTIES_PRODUCT: '/api-products/:apiprod_uuid/properties',
     NEW_VERSION: '/apis/:api_uuid/new_version',
     NEW_VERSION_PRODUCT: '/api-products/:api_uuid/new_version',
+    SHARE: '/apis/:api_uuid/share',
     MONETIZATION: '/apis/:api_uuid/monetization',
     MONETIZATION_PRODUCT: '/api-products/:apiprod_uuid/monetization',
     EXTERNAL_STORES: '/apis/:api_uuid/external-devportals',
@@ -1095,6 +1213,7 @@ Details.subPaths = {
     TOPICS: '/apis/:api_uuid/topics',
     ASYNCAPI_DEFINITION: '/apis/:api_uuid/asyncApi-definition',
     POLICIES: '/apis/:api_uuid/policies',
+    COMPLIANCE: '/apis/:api_uuid/compliance',
 };
 
 // To make sure that paths will not change by outsiders, Basically an enum

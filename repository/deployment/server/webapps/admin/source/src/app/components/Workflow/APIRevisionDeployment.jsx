@@ -176,7 +176,7 @@ function ListLabels() {
                         <Link
                             target='_blank'
                             href={Configurations.app.docUrl
-                        + 'deploy-and-publish/deploy-on-gateway/deploy-api/revision-deployment-workflow'}
+                                + 'deploy-and-publish/deploy-on-gateway/deploy-api/revision-deployment-workflow'}
                             underline='hover'
                         >
                             <ListItemText primary={(
@@ -369,6 +369,24 @@ function ListLabels() {
         customToolbar: null,
         responsive: 'vertical',
         searchText,
+        textLabels: {
+            body: {
+                noMatch: intl.formatMessage({
+                    id: 'Mui.data.table.search.no.records.found',
+                    defaultMessage: 'Sorry, no matching records found',
+                }),
+            },
+            pagination: {
+                rowsPerPage: intl.formatMessage({
+                    id: 'Mui.data.table.pagination.rows.per.page',
+                    defaultMessage: 'Rows per page:',
+                }),
+                displayRows: intl.formatMessage({
+                    id: 'Mui.data.table.pagination.display.rows',
+                    defaultMessage: 'of',
+                }),
+            },
+        },
     };
     if (data && data.length === 0) {
         return (

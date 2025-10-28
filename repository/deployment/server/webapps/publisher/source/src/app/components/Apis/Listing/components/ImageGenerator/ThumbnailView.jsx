@@ -313,10 +313,17 @@ class ThumbnailView extends Component {
 
         promisedThumbnail
             .then(() => {
-                Alert.info(intl.formatMessage({
-                    id: 'Apis.Listing.components.ImageGenerator.ThumbnailView.thumbnail.upload.success',
-                    defaultMessage: 'Thumbnail uploaded successfully',
-                }));
+                if (selectedTab === 'upload') {
+                    Alert.info(intl.formatMessage({
+                        id: 'Apis.Listing.components.ImageGenerator.ThumbnailView.thumbnail.upload.success',
+                        defaultMessage: 'Thumbnail uploaded successfully',
+                    }));
+                } else if (selectedTab === 'remove') {
+                    Alert.info(intl.formatMessage({
+                        id: 'Apis.Listing.components.ImageGenerator.ThumbnailView.thumbnail.remove.success',
+                        defaultMessage: 'Thumbnail removed successfully',
+                    }));
+                }
                 if (selectedTab === 'upload') {
                     this.props.updateAPI({hasThumbnail: true});
                     this.setState({ open: false, thumbnail: windowURL.createObjectURL(file) });
@@ -467,8 +474,19 @@ class ThumbnailView extends Component {
                                         className={classes.dropzone}
                                         activeClassName={classes.acceptDrop}
                                         rejectClassName={classes.rejectDrop}
-                                        onDrop={(dropFile) => {
-                                            this.onDrop(dropFile);
+                                        onDrop={(dropFile, rejectedFiles) => {
+                                            if (rejectedFiles && rejectedFiles.length > 0) {
+                                                if (rejectedFiles[0].errors[0].code === 'file-too-large') { 
+                                                    Alert.error(intl.formatMessage({
+                                                        id: 'upload.image.size.info',
+                                                        defaultMessage: 'Maximum file size limit to 1MB',
+                                                    }));
+                                                } else {
+                                                    Alert.error(rejectedFiles[0].errors[0].message);
+                                                }
+                                            } else {
+                                                this.onDrop(dropFile);
+                                            }
                                         }}
                                     >
                                         {({ getRootProps, getInputProps, rejectedFiles }) => {

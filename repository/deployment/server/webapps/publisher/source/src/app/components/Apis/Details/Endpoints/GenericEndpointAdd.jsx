@@ -24,7 +24,7 @@ import {
     InputAdornment,
     TextField,
 } from '@mui/material';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import PropTypes from 'prop-types';
 import { isRestricted } from 'AppData/AuthManager';
 import APIContext from 'AppComponents/Apis/Details/components/ApiContext';
@@ -73,10 +73,11 @@ function GenericEndpointAdd(props) {
     const {
         addEndpoint,
         endpointType,
-        category
+        category,
     } = props;
     const [serviceUrl, setServiceUrl] = useState('');
     const { api } = useContext(APIContext);
+    const intl = useIntl();
 
     /**
      * The method to handle endpoint add button click action.
@@ -102,7 +103,10 @@ function GenericEndpointAdd(props) {
                 onChange={(event) => setServiceUrl(event.target.value)}
                 variant='outlined'
                 margin='normal'
-                placeholder='Enter the Endpoint URL and press + button'
+                placeholder={intl.formatMessage({
+                    id: 'Apis.Details.Endpoints.GenericEndpoint.service.url.input.placeholder',
+                    defaultMessage: 'Enter the Endpoint URL and press + button',
+                })}
                 InputProps={{
                     id: category + '-' + endpointType,
                     endAdornment: (

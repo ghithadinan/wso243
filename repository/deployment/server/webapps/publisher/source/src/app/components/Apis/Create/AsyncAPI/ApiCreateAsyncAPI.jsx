@@ -21,12 +21,12 @@ import PropTypes from 'prop-types';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import Grid from '@mui/material/Grid';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import Stepper from '@mui/material/Stepper';
 import Step from '@mui/material/Step';
 import StepLabel from '@mui/material/StepLabel';
 import Button from '@mui/material/Button';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import API from 'AppData/api';
 import Alert from 'AppComponents/Shared/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -39,6 +39,7 @@ import TextField from '@mui/material/TextField';
 
 import Chip from '@mui/material/Chip';
 import Joi from '@hapi/joi';
+import { usePublisherSettings } from 'AppComponents/Shared/AppContext';
 import { upperCaseString } from 'AppData/stringFormatter';
 import ExternalEndpoint from 'AppComponents/Apis/Create/AsyncAPI/ExternalEndpoint';
 import ProvideAsyncAPI from './Steps/ProvideAsyncAPI';
@@ -81,13 +82,27 @@ const StyledAPICreateBase = styled(APICreateBase)((
  */
 export default function ApiCreateAsyncAPI(props) {
     const [wizardStep, setWizardStep] = useState(0);
+    const location = useLocation();
+    const { data: assistantInfo, settings: assistantSettings,
+        multiGateway: assistantMultiGateway } = location.state || {};
     const { history } = props;
+    let { multiGateway } = props;
+    let { data: settings } = usePublisherSettings();
+    if (!settings) {
+        settings = assistantSettings;
+    }
+
+    if (!multiGateway) {
+        multiGateway = assistantMultiGateway;
+    }
+
     // eslint-disable-next-line no-use-before-define
 
     const [hideEndpoint, setHideEndpoint] = useState(true);
     const [hideExternalEndpoint, setHideExternalEndpoint] = useState(true);
     const [isValidExternalEndpoint, setValidExternalEndpoint] = useState(true);
 
+    const intl = useIntl();
     /**
      *
      * Reduce the events triggered from API input fields to current state
@@ -134,7 +149,18 @@ export default function ApiCreateAsyncAPI(props) {
         inputType: 'url',
         inputValue: '',
         formValidity: false,
+        gatewayType: multiGateway && (multiGateway.filter((gw) => gw.value === 'wso2/synapse').length > 0 ?
+            'wso2/synapse' : multiGateway[0]?.value),
     });
+
+    if (assistantInfo && wizardStep === 0 && assistantInfo.source === 'DesignAssistant') {
+        setWizardStep(1);
+        inputsDispatcher({ action: 'preSetAPI', value: assistantInfo });
+        inputsDispatcher({ action: 'protocol', value: assistantInfo.protocol });
+        inputsDispatcher({ action: 'endpoint', value: assistantInfo.endpoint });
+        inputsDispatcher({ action: 'inputType', value: 'file' });
+        inputsDispatcher({ action: 'inputValue', value: assistantInfo.file });
+    }
 
     const protocols = [
         {
@@ -164,6 +190,16 @@ export default function ApiCreateAsyncAPI(props) {
         SSE: 'SSE',
         WebSub: 'WEBSUB',
         Other: 'ASYNC',
+    };
+
+    /**
+     * Handles back button click for the API creation wizard for Design Asistant
+     * @param 
+     *  
+     */
+    const handleBackButtonOnClick = () => {
+        const landingPage = '/apis';
+        history.push(landingPage);
     };
 
     /**
@@ -275,14 +311,20 @@ export default function ApiCreateAsyncAPI(props) {
             ? newAPI.importAsyncAPIByFile(inputValue) : newAPI.importAsyncAPIByUrl(inputValue);
         promisedResponse
             .then((api) => {
-                Alert.info('API created successfully');
+                Alert.info(intl.formatMessage({
+                    id: 'Apis.Create.AsyncAPI.ApiCreateAsyncAPI.created.success',
+                    defaultMessage: 'API created successfully',
+                }));
                 history.push(`/apis/${api.id}/overview`);
             })
             .catch((error) => {
                 if (error.response) {
                     Alert.error(error.response.body.description);
                 } else {
-                    Alert.error('Something went wrong while adding the API');
+                    Alert.error(intl.formatMessage({
+                        id: 'Apis.Create.AsyncAPI.ApiCreateAsyncAPI.created.error',
+                        defaultMessage: 'Something went wrong while adding the API',
+                    }));
                 }
                 console.error(error);
             })
@@ -309,7 +351,7 @@ export default function ApiCreateAsyncAPI(props) {
             )}
         >
             <Box sx={{ mb: 2 }}>
-                <Stepper alternativeLabel activeStep={0}>
+                <Stepper alternativeLabel activeStep={wizardStep}>
                     <Step>
                         <StepLabel>
                             <FormattedMessage
@@ -348,10 +390,12 @@ export default function ApiCreateAsyncAPI(props) {
                             hideEndpoint={hideEndpoint}
                             endpointPlaceholderText='Streaming Provider'
                             appendChildrenBeforeEndpoint
+                            multiGateway={multiGateway}
+                            settings={settings}
                         >
                             <Grid container spacing={2}>
                                 {apiInputs.gatewayVendor === 'solace'
-                                && apiInputs.asyncTransportProtocols.length !== 0 && (
+                                    && apiInputs.asyncTransportProtocols.length !== 0 && (
                                     <>
                                         <Grid item xs={12} md={6} lg={3}>
                                             <Typography component='p' variant='subtitle2'>
@@ -448,21 +492,36 @@ export default function ApiCreateAsyncAPI(props) {
                                 </Link>
                             )}
                             {wizardStep === 1 && (
-                                <Button onClick={() => setWizardStep((step) => step - 1)}>
-                                    Back
-                                </Button>
+                                (assistantInfo && assistantInfo.source ===  'DesignAssistant') ? (
+                                    <Button onClick={handleBackButtonOnClick}>
+                                        <FormattedMessage
+                                            id='Apis.Create.AsyncAPI.ApiCreateAsyncAPI.designAssistant.back'
+                                            defaultMessage='Back'
+                                        />
+                                    </Button>
+                                ) : (
+                                    <Button onClick={() => setWizardStep((step) => step - 1)}>
+                                        <FormattedMessage
+                                            id='Apis.Create.AsyncAPI.ApiCreateAsyncAPI.back'
+                                            defaultMessage='Back'
+                                        />
+                                    </Button>
+                                )
                             )}
                         </Grid>
                         <Grid item>
                             {wizardStep === 0 && (
                                 <Button
-                                    data-testid= 'next-btn'
+                                    data-testid='next-btn'
                                     onClick={() => setWizardStep((step) => step + 1)}
                                     variant='contained'
                                     color='primary'
                                     disabled={!apiInputs.isFormValid}
                                 >
-                                    Next
+                                    <FormattedMessage
+                                        id='Apis.Create.AsyncAPI.ApiCreateAsyncAPI.next'
+                                        defaultMessage='Next'
+                                    />
                                 </Button>
                             )}
                             {wizardStep === 1 && (
@@ -473,7 +532,10 @@ export default function ApiCreateAsyncAPI(props) {
                                     disabled={!apiInputs.isFormValid || isCreating || !isValidExternalEndpoint}
                                     onClick={createAPI}
                                 >
-                                    Create
+                                    <FormattedMessage
+                                        id='Apis.Create.AsyncAPI.ApiCreateAsyncAPI.create'
+                                        defaultMessage='Create'
+                                    />
                                     {' '}
                                     {isCreating && <CircularProgress size={24} />}
                                 </Button>

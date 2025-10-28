@@ -53,7 +53,7 @@
         <script src="<%= context%>/site/public/fonts/iconfont/MaterialIcons.js"></script>
         <script src="<%= context%>/site/public/conf/userTheme.js"></script>
         <script src="<%= context%>/services/settings/settings.js"></script>
-        <script src="<%= context%>/site/public/dist/index.870520835178bb82e918.bundle.js"></script>
+        <script src="<%= context%>/site/public/dist/index.e0acd4f27dd844195df8.bundle.js"></script>
         <link rel="stylesheet" href="<%= context%>/site/public/fonts/iconfont/material-icons.css">
     </body>
 

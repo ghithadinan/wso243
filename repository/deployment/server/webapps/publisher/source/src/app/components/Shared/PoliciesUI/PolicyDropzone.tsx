@@ -23,6 +23,7 @@ import green from '@mui/material/colors/green';
 import red from '@mui/material/colors/red';
 import clsx from 'clsx';
 import type { AttachedPolicy, Policy, PolicySpec } from './Types';
+import { FormattedMessage } from 'react-intl';
 
 const PREFIX = 'PolicyDropzoneShared';
 
@@ -90,6 +91,8 @@ interface PolicyDropzoneSharedProps {
     setDroppedPolicy: any;
     AttachedPolicyList: any;
     PolicyConfiguringDrawer: any;
+    listOriginatedFromCommonPolicies?: string[];
+    isApiRevision?: boolean;
 }
 
 const PolicyDropzoneShared: FC<PolicyDropzoneSharedProps> = ({
@@ -106,7 +109,9 @@ const PolicyDropzoneShared: FC<PolicyDropzoneSharedProps> = ({
     droppedPolicy,
     setDroppedPolicy,
     AttachedPolicyList,
-    PolicyConfiguringDrawer
+    PolicyConfiguringDrawer,
+    listOriginatedFromCommonPolicies,
+    isApiRevision
 }) => {
 
     return (
@@ -127,7 +132,12 @@ const PolicyDropzoneShared: FC<PolicyDropzoneSharedProps> = ({
                     })}
                 >
                     {currentPolicyList.length === 0 ? (
-                        <Typography>Drag and drop policies here</Typography>
+                        <Typography>
+                            <FormattedMessage
+                                id='App.Components.Policies.Drop.Zone.text.label'
+                                defaultMessage='Drag and drop policies here'
+                            />
+                        </Typography>
                     ) : (
                         <AttachedPolicyList
                             currentPolicyList={currentPolicyList}
@@ -140,6 +150,8 @@ const PolicyDropzoneShared: FC<PolicyDropzoneSharedProps> = ({
                             verb={verb}
                             allPolicies={allPolicies}
                             isAPILevelPolicy={isAPILevelPolicy}
+                            listOriginatedFromCommonPolicies={listOriginatedFromCommonPolicies}
+                            isApiRevision={isApiRevision}
                         />
                     )}
                 </div>

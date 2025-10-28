@@ -17,7 +17,7 @@
  */
 
 import React, {
-    useReducer, useState, Suspense, lazy, useEffect,
+    useReducer, useState, Suspense, useEffect,
 } from 'react';
 import { useHistory } from 'react-router-dom';
 import PropTypes from 'prop-types';
@@ -30,7 +30,7 @@ import Alert from 'AppComponents/Shared/Alert';
 import { Progress } from 'AppComponents/Shared';
 import ContentBase from 'AppComponents/AdminPages/Addons/ContentBase';
 
-const MonacoEditor = lazy(() => import('react-monaco-editor' /* webpackChunkName: "TeantConfAddMonacoEditor" */));
+import { Editor as MonacoEditor } from '@monaco-editor/react';
 
 /**
  * Reducer
@@ -67,18 +67,19 @@ function TenantConfSave() {
         tenantConf, tenantConfSchema,
     } = state;
     const restApi = new API();
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        let tenantConfVal;
-        let tenantConfSchemaVal;
-        restApi.tenantConfSchemaGet().then((result) => {
-            tenantConfSchemaVal = result.body;
-            dispatch({ field: 'tenantConfSchema', value: tenantConfSchemaVal });
-        });
-        restApi.tenantConfGet().then((result) => {
-            tenantConfVal = JSON.stringify(result.body, null, '\t');
-            dispatch({ field: 'tenantConf', value: tenantConfVal });
-        });
+        Promise.all([
+            restApi.tenantConfSchemaGet().then((result) => {
+                const tenantConfSchemaVal = result.body;
+                dispatch({ field: 'tenantConfSchema', value: tenantConfSchemaVal });
+            }),
+            restApi.tenantConfGet().then((result) => {
+                const tenantConfVal = JSON.stringify(result.body, null, '\t');
+                dispatch({ field: 'tenantConf', value: tenantConfVal });
+            }),
+        ]).then(() => setLoading(false));
     }, []);
 
     const editorWillMount = (monaco) => {
@@ -145,16 +146,20 @@ function TenantConfSave() {
             <Box component='div' sx={{ mb: 15, m: 2 }} name={tenantConfSchema}>
                 <Grid container>
                     <Grid item xs={12} md={12} lg={12} sx={{ p: 2 }}>
-                        <Suspense fallback={<Progress />}>
-                            <MonacoEditor
-                                language='json'
-                                height='615px'
-                                theme='vs-dark'
-                                value={tenantConf}
-                                onChange={tenantConfOnChange}
-                                editorWillMount={editorWillMount}
-                            />
-                        </Suspense>
+                        {loading ? (
+                            <Progress />
+                        ) : (
+                            <Suspense fallback={<Progress />}>
+                                <MonacoEditor
+                                    language='json'
+                                    height='615px'
+                                    theme='vs-dark'
+                                    value={tenantConf}
+                                    onChange={tenantConfOnChange}
+                                    beforeMount={editorWillMount}
+                                />
+                            </Suspense>
+                        )}
                     </Grid>
                     <Box component='span' sx={{ mt: 2, mb: 2, ml: 1 }}>
                         <Button

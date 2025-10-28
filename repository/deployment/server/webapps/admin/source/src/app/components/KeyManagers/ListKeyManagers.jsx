@@ -22,7 +22,8 @@ import { useIntl, FormattedMessage } from 'react-intl';
 import Typography from '@mui/material/Typography';
 import Delete from 'AppComponents/KeyManagers/DeleteKeyManager';
 import { Link as RouterLink, useHistory } from 'react-router-dom';
-import Alert from '@mui/material/Alert';
+import AlertMui from '@mui/material/Alert';
+import Alert from 'AppComponents/Shared/Alert';
 import Switch from '@mui/material/Switch';
 import Button from '@mui/material/Button';
 import {
@@ -295,7 +296,7 @@ export default function ListKeyManagers() {
                                         size='small'
                                         label='Global'
                                         color='primary'
-                                        style={{ marginTop: -4, marginLeft: 10 }}
+                                        style={{ marginLeft: 10 }}
                                     />
                                 )}
                             </RouterLink>
@@ -379,9 +380,15 @@ export default function ListKeyManagers() {
                             const artifactId = tableMeta.rowData[6];
                             let tooltipTitle = '';
                             if (dataRow.isGlobal && !isSuperAdmin) {
-                                tooltipTitle = 'Global Key Manager only can be deleted by the super admin user';
+                                tooltipTitle = intl.formatMessage({
+                                    id: 'KeyManagers.ListKeyManagers.table.global.delete.tooltip',
+                                    defaultMessage: 'Global Key Manager only can be deleted by the super admin user',
+                                });
                             } else if (dataRow.isUsed) {
-                                tooltipTitle = 'Key manager is used by an API or an Application';
+                                tooltipTitle = intl.formatMessage({
+                                    id: 'KeyManagers.ListKeyManagers.table.is.used.delete.tooltip',
+                                    defaultMessage: 'Key manager is used by an API or an Application',
+                                });
                             }
                             return (
                                 <div data-testid={`${itemName}-actions`}>
@@ -415,9 +422,15 @@ export default function ListKeyManagers() {
                     }
                     let tooltipTitle = '';
                     if (dataRow.isGlobal && !isSuperAdmin) {
-                        tooltipTitle = 'Global Key Manager only can be deleted by the super admin user';
+                        tooltipTitle = intl.formatMessage({
+                            id: 'KeyManagers.ListKeyManagers.table.global.delete.tooltip',
+                            defaultMessage: 'Global Key Manager only can be deleted by the super admin user',
+                        });
                     } else if (dataRow.isUsed) {
-                        tooltipTitle = 'Key manager is used by an API or an Application';
+                        tooltipTitle = intl.formatMessage({
+                            id: 'KeyManagers.ListKeyManagers.table.is.used.delete.tooltip',
+                            defaultMessage: 'Key manager is used by an API or an Application',
+                        });
                     }
                     return (
                         <div data-testid={`${itemName}-actions`}>
@@ -615,6 +628,24 @@ export default function ListKeyManagers() {
         responsive: 'stacked',
         searchText,
         onColumnSortChange,
+        textLabels: {
+            body: {
+                noMatch: intl.formatMessage({
+                    id: 'Mui.data.table.search.no.records.found',
+                    defaultMessage: 'Sorry, no matching records found',
+                }),
+            },
+            pagination: {
+                rowsPerPage: intl.formatMessage({
+                    id: 'Mui.data.table.pagination.rows.per.page',
+                    defaultMessage: 'Rows per page:',
+                }),
+                displayRows: intl.formatMessage({
+                    id: 'Mui.data.table.pagination.display.rows',
+                    defaultMessage: 'of',
+                }),
+            },
+        },
     };
 
     const filterData = (event) => {
@@ -653,7 +684,7 @@ export default function ListKeyManagers() {
     if (error) {
         return (
             <ContentBase {...pageProps}>
-                <Alert severity='error'>{error}</Alert>
+                <AlertMui severity='error'>{error}</AlertMui>
             </ContentBase>
         );
     }
@@ -730,7 +761,10 @@ export default function ListKeyManagers() {
                         fullWidth
                     >
                         <DialogTitle>
-                            Key Manager Usages -
+                            <FormattedMessage
+                                id='AdminPages.KeyManagers.Usages.dialog.title'
+                                defaultMessage='Key Manager Usages -'
+                            />
                             {' '}
                             {selectedKMName}
                         </DialogTitle>
@@ -738,7 +772,12 @@ export default function ListKeyManagers() {
                             <ListKeyManagerUsages id={selectedArtifactId} />
                         </DialogContent>
                         <DialogActions>
-                            <Button onClick={closeDialog}>Close</Button>
+                            <Button onClick={closeDialog}>
+                                <FormattedMessage
+                                    id='AdminPages.KeyManagers.Usages.dialog.close.btn'
+                                    defaultMessage='Close'
+                                />
+                            </Button>
                         </DialogActions>
                     </Dialog>
                 </div>

@@ -21,8 +21,9 @@ import PropTypes from 'prop-types';
 import DialogContentText from '@mui/material/DialogContentText';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import FormDialogBase from 'AppComponents/AdminPages/Addons/FormDialogBase';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import API from 'AppData/api';
+import Alert from 'AppComponents/Shared/Alert';
 
 /**
  * Render delete dialog box.
@@ -34,27 +35,29 @@ function Delete(props) {
     const {
         dataRow, updateList,
     } = props;
+    const intl = useIntl();
 
     const formSaveCallback = () => {
-        const policyId = dataRow[6];
+        const policyId = dataRow[9];
         const promiseAPICall = restApi
             .deleteSubscriptionPolicy(policyId)
             .then(() => {
                 updateList();
                 return (
-                    <FormattedMessage
-                        id='Throttling.Subscription.Policy.policy.delete.success'
-                        defaultMessage='Subscription Rate Limiting Policy successfully deleted.'
-                    />
+                    intl.formatMessage({
+                        id: 'Throttling.Subscription.Policy.policy.delete.success',
+                        defaultMessage: 'Subscription Rate Limiting Policy successfully deleted.',
+                    })
                 );
             })
             .catch(() => {
-                return (
-                    <FormattedMessage
-                        id='Throttling.Subscription.Policy.policy.delete.error'
-                        defaultMessage='Subscription Rate Limiting Policy could not be deleted.'
-                    />
+                Alert.error(
+                    intl.formatMessage({
+                        id: 'Throttling.Subscription.Policy.policy.delete.error',
+                        defaultMessage: 'Subscription Rate Limiting Policy could not be deleted.',
+                    }),
                 );
+                return false;
             });
 
         return (promiseAPICall);
@@ -62,8 +65,14 @@ function Delete(props) {
 
     return (
         <FormDialogBase
-            title='Delete Subscription Policy?'
-            saveButtonText='Delete'
+            title={intl.formatMessage({
+                id: 'Throttling.Subscription.Policy.policy.delete.title',
+                defaultMessage: 'Delete Subscription Policy?',
+            })}
+            saveButtonText={intl.formatMessage({
+                id: 'Throttling.Subscription.Policy.policy.delete.btn',
+                defaultMessage: 'Delete',
+            })}
             icon={<DeleteForeverIcon aria-label='delete-subscription-policies' />}
             formSaveCallback={formSaveCallback}
         >

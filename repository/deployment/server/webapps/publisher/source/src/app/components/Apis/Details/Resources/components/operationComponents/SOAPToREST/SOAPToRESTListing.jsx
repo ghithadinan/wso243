@@ -17,7 +17,7 @@
  */
 
 import React, {
-    useState, Suspense, lazy, useEffect,
+    useState, Suspense, useEffect,
 } from 'react';
 import PropTypes from 'prop-types';
 import Grid from '@mui/material/Grid';
@@ -31,10 +31,11 @@ import Paper from '@mui/material/Paper';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import Box from '@mui/material/Box';
+import { Editor as MonacoEditor } from '@monaco-editor/react';
+import { FormattedMessage, useIntl } from 'react-intl';
 
 import PolicyEditor from './PolicyEditor';
 
-const MonacoEditor = lazy(() => import('react-monaco-editor' /* webpackChunkName: "SOAPToRESTMonaco" */));
 
 /**
  *
@@ -47,6 +48,8 @@ export default function SOAPToRESTListing(props) {
     const { resourcePolicy, resourcePoliciesDispatcher } = props;
     const [resourcePolicyIn, setResourcePolicyIn] = useState(resourcePolicy.in);
     const [resourcePolicyOut, setResourcePolicyOut] = useState(resourcePolicy.out);
+    const intl = useIntl();
+
     useEffect(() => {
         setResourcePolicyIn(resourcePolicy.in);
         setResourcePolicyOut(resourcePolicy.out);
@@ -64,6 +67,7 @@ export default function SOAPToRESTListing(props) {
     const selectedPolicy = selectedTab === 'in' ? resourcePolicyIn : resourcePolicyOut;
     const editorProps = {
         language: 'xml',
+        width: '99%',
         height: 'calc(50vh)',
         theme: prefersDarkMode ? 'vs-dark' : 'vs',
         value: selectedPolicy.content,
@@ -86,7 +90,10 @@ export default function SOAPToRESTListing(props) {
         <>
             <Grid item xs={12} md={12}>
                 <Typography variant='subtitle1'>
-                    Transformation Configurations
+                    <FormattedMessage
+                        id='Apis.Details.Components.SOAP.To.REST.transformation.text'
+                        defaultMessage='Transformation Configurations'
+                    />
                     <Divider variant='middle' />
                 </Typography>
             </Grid>
@@ -98,12 +105,27 @@ export default function SOAPToRESTListing(props) {
                     onChange={(event, tab) => setTabIndex(tab)}
                     aria-label='Resource mediation in/out tabs'
                 >
-                    <Tab value='in' label='In' />
-                    <Tab value='out' label='Out' />
+                    <Tab
+                        value='in'
+                        label={intl.formatMessage({
+                            id: 'Apis.Details.Components.SOAP.To.REST.tabs.In.text',
+                            defaultMessage: 'In',
+                        })}
+                    />
+                    <Tab
+                        value='out'
+                        label={intl.formatMessage({
+                            id: 'Apis.Details.Components.SOAP.To.REST.tabs.Out.text',
+                            defaultMessage: 'Out',
+                        })}
+                    />
                 </Tabs>
                 <Box p={1}>
                     <Button onClick={() => setOpenEditor(true)} variant='outlined' size='small' color='primary'>
-                        Edit
+                        <FormattedMessage
+                            id='Apis.Details.Components.SOAP.To.REST.edit.btn'
+                            defaultMessage='Edit'
+                        />
                         {' '}
                         <EditIcon />
                     </Button>

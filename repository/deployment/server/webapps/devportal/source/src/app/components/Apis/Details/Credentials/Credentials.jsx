@@ -381,7 +381,19 @@ class Credentials extends React.Component {
         const client = new Subscription();
         const promisedDelete = client.deleteSubscription(subscriptionId);
         promisedDelete.then((response) => {
-            if (response.status !== 200) {
+            if (response.status === 200) {
+                Alert.info(intl.formatMessage({
+                    defaultMessage: 'Subscription deleted successfully!',
+                    id: 'Apis.Details.Credentials.Credentials.subscription.deleted.successfully',
+                }));
+            }
+            if (response.status === 201) {
+                Alert.info(intl.formatMessage({
+                    defaultMessage: 'Subscription Deletion Request Created!',
+                    id: 'Apis.Details.Credentials.Credentials.subscription.request.created',
+                }));
+            }
+            if (response.status !== 200 && response.status !== 201) {
                 console.log(response);
                 Alert.info(intl.formatMessage({
                     defaultMessage: 'Something went wrong while deleting the Subscription!',
@@ -389,10 +401,6 @@ class Credentials extends React.Component {
                 }));
                 return;
             }
-            Alert.info(intl.formatMessage({
-                defaultMessage: 'Subscription deleted successfully!',
-                id: 'Apis.Details.Credentials.Credentials.subscription.deleted.successfully',
-            }));
             if (updateSubscriptionData) updateSubscriptionData(this.updateData);
         });
     };
@@ -502,7 +510,7 @@ class Credentials extends React.Component {
                                                 <FormattedMessage
                                                     id={'Apis.Details.Credentials.'
                                                     + 'SubscibeButtonPanel.subscribe.wizard.with.new.app'}
-                                                    defaultMessage='Subscription &amp; Key Generation Wizard'
+                                                    defaultMessage='Subscription & Key Generation Wizard'
                                                 />
                                             </Button>
                                         </div>
@@ -663,7 +671,7 @@ class Credentials extends React.Component {
                                                     <FormattedMessage
                                                         id={'Apis.Details.Credentials.'
                                                         + 'SubscibeButtonPanel.subscribe.wizard.with.new.app'}
-                                                        defaultMessage='Subscription &amp; Key Generation Wizard'
+                                                        defaultMessage='Subscription & Key Generation Wizard'
                                                     />
                                                 </Button>
                                             </Link>

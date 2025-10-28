@@ -59,7 +59,7 @@
                 module.exports = AppConfig; // For Jest unit tests
             }
         </script>
-        <script src="<%= context%>/site/public/dist/index.0a947ffc1dbb86198805.bundle.js"></script>
+        <script src="<%= context%>/site/public/dist/index.3aff4adedc943b38d090.bundle.js"></script>
         <!-- Swagger worker has being removed until we resolve
         *              https://github.com/wso2/product-apim/issues/10694 issue, need to change webpack config too -->
         <!-- <script src="<%= context%>/"></script> -->

@@ -137,11 +137,12 @@ class CreateNewVersion extends React.Component {
                     MaxLengthExceeds: false,
                 },
             },
+            isLoading: false,
         };
     }
 
     componentDidMount() {
-        const { api } = this.props;
+        const { api, intl} = this.props;
         if (api.serviceInfo !== undefined) {
             if (api.serviceInfo !== null) {
                 const promisedServices = ServiceCatalog.getServiceByName(api.serviceInfo);
@@ -150,7 +151,10 @@ class CreateNewVersion extends React.Component {
                     this.setState({ versionList: array });
                 }).catch((error) => {
                     console.error(error);
-                    Alert.error('Error while loading services version');
+                    Alert.error(intl.formatMessage({
+                        id: 'Apis.Details.NewVersion.loading.services.error',
+                        defaultMessage: 'Error while loading services version',
+                    }));
                 });
             }
         }
@@ -197,6 +201,7 @@ class CreateNewVersion extends React.Component {
             this.setState({ valid: { version: { empty: true } } });
             return;
         }
+        this.setState({ isLoading: true });
         const isDefaultVersionBool = isDefaultVersion === 'yes';
         const apiClient = new API();
         const { intl } = this.props;
@@ -206,6 +211,7 @@ class CreateNewVersion extends React.Component {
                     this.setState({
                         redirectToReferrer: true,
                         apiId: response.obj.id,
+                        isLoading: false,
                     });
                     Alert.info(intl.formatMessage({
                         id: 'Apis.Details.APIProduct.NewVersion.NewVersion.success',
@@ -214,8 +220,12 @@ class CreateNewVersion extends React.Component {
                 })
                 .catch((error) => {
                     if (error.status === 409) {
-                        this.setState({ valid: { version: { alreadyExists: true } } });
+                        this.setState({
+                            valid: { version: { alreadyExists: true } },
+                            isLoading: false,
+                        });
                     } else {
+                        this.setState({ isLoading: false });
                         Alert.error(intl.formatMessage({
                             id: 'Apis.Details.APIProduct.NewVersion.NewVersion.error',
                             defaultMessage: 'Something went wrong while creating a new version!. Error: ',
@@ -228,6 +238,7 @@ class CreateNewVersion extends React.Component {
                     this.setState({
                         redirectToReferrer: true,
                         apiId: response.obj.id,
+                        isLoading: false,
                     });
                     Alert.info(intl.formatMessage({
                         id: 'Apis.Details.NewVersion.NewVersion.success',
@@ -236,8 +247,12 @@ class CreateNewVersion extends React.Component {
                 })
                 .catch((error) => {
                     if (error.status === 409) {
-                        this.setState({ valid: { version: { alreadyExists: true } } });
+                        this.setState({
+                            valid: { version: { alreadyExists: true } },
+                            isLoading: false,
+                        });
                     } else {
+                        this.setState({ isLoading: false });
                         Alert.error(intl.formatMessage({
                             id: 'Apis.Details.NewVersion.NewVersion.error',
                             defaultMessage: 'Something went wrong while creating a new version!. Error: ',
@@ -274,9 +289,9 @@ class CreateNewVersion extends React.Component {
      * @returns {*} CreateNewVersion component
      */
     render() {
-        const {  api } = this.props;
+        const {  api, intl } = this.props;
         const {
-            isDefaultVersion, newVersion, redirectToReferrer, apiId, valid, serviceVersion, versionList,
+            isDefaultVersion, newVersion, redirectToReferrer, apiId, valid, serviceVersion, versionList, isLoading
         } = this.state;
         if (redirectToReferrer) {
             return <Redirect to={(api.apiType === 'APIPRODUCT' ? '/api-products/' : '/apis/') + apiId + '/overview'} />;
@@ -284,13 +299,26 @@ class CreateNewVersion extends React.Component {
 
         let helperText = '';
         if (valid.version.empty) {
-            helperText = 'This field cannot be empty';
+            helperText = intl.formatMessage({
+                id: 'Apis.Details.NewVersion.NewVersion.helper.field.is.empty',
+                defaultMessage: 'This field cannot be empty'
+            });
         } else if (valid.version.alreadyExists) {
-            helperText = 'An API with version "' + newVersion + '" already exists.';
+            helperText = intl.formatMessage({
+                id: 'Apis.Details.NewVersion.NewVersion.helper.version.exists',
+                defaultMessage: 'An API with version {newVersion} already exists.',
+            },
+            { newVersion });
         } else if (valid.version.hasSpecialChars) {
-            helperText = 'API Version should not contain special characters';
+            helperText = intl.formatMessage({
+                id: 'Apis.Details.NewVersion.NewVersion.helper.version.is.invalid',
+                defaultMessage: 'API Version should not contain special characters',
+            });
         } else if (valid.version.MaxLengthExceeds) {
-            helperText = 'API version exceeds maximum length of 30 characters';
+            helperText = intl.formatMessage({
+                id: 'Apis.Details.NewVersion.NewVersion.helper.version.is.too.long',
+                defaultMessage: 'API version exceeds maximum length of 30 characters',
+            });
         }
 
         return (
@@ -328,7 +356,10 @@ class CreateNewVersion extends React.Component {
                                         }
                                         type='text'
                                         name='newVersion'
-                                        placeholder='Eg: 2.0.0'
+                                        placeholder={intl.formatMessage({
+                                            id: 'Apis.Details.NewVersion.NewVersion.new.version.placeholder',
+                                            defaultMessage: 'Eg: 2.0.0',
+                                        }) }
                                         value={newVersion}
                                         variant='outlined'
                                         onChange={this.handleVersionChange()}
@@ -429,6 +460,7 @@ class CreateNewVersion extends React.Component {
                                                         || valid.version.hasSpecialChars
                                                         || valid.version.MaxLengthExceeds
                                                         || api.isRevision
+                                                        || isLoading
                                                     }
                                                 >
                                                     <FormattedMessage

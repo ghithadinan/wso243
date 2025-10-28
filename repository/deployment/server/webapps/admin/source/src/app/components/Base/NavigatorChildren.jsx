@@ -15,7 +15,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useAppContext } from 'AppComponents/Shared/AppContext';
 import PropTypes from 'prop-types';
 import clsx from 'clsx';
@@ -35,20 +35,30 @@ import ExpandMore from '@mui/icons-material/ExpandMore';
  * @returns {JSX} Header AppBar components.
  */
 function NavigatorChildren(props) {
-    const { isSuperTenant } = useAppContext();
+    const { settings, isSuperTenant, user: { _scopes } } = useAppContext();
+    const isSuperAdmin = isSuperTenant && _scopes.includes('apim:admin_settings');
+    const istransactionCounterEnabled = settings.transactionCounterEnable;
     const [open, setOpen] = React.useState(true);
-    const { navChildren, navId, classes } = props;
+    const { navChildren, navText, classes } = props;
     const handleClick = () => {
         setOpen(!open);
     };
-    let navigationChildren = navChildren;
-    if (isSuperTenant) {
-        navigationChildren = navChildren.filter((menu) => menu.id !== 'Tenant Theme');
-    }
 
-    if (!isSuperTenant) {
-        navigationChildren = navChildren.filter((menu) => menu.id !== 'Custom Policies');
-    }
+    const [navigationChildren, setNavigationChildren] = React.useState(navChildren); // Corrected useState syntax
+
+    useEffect(() => {
+        let filteredNavChildren = [...navChildren]; // Start with the original array
+        if (isSuperTenant) {
+            filteredNavChildren = filteredNavChildren.filter((menu) => menu.id !== 'Tenant Theme');
+        }
+        if (!isSuperTenant) {
+            filteredNavChildren = filteredNavChildren.filter((menu) => menu.id !== 'Custom Policies');
+        }
+        if (!isSuperAdmin || !istransactionCounterEnabled) {
+            filteredNavChildren = filteredNavChildren.filter((menu) => menu.id !== 'Usage Report');
+        }
+        setNavigationChildren(filteredNavChildren); // Set the filtered array once
+    }, [isSuperTenant, isSuperAdmin, navChildren]);
 
     return (
         <>
@@ -58,14 +68,14 @@ function NavigatorChildren(props) {
                         primary: classes.categoryHeaderPrimary,
                     }}
                 >
-                    {navId}
+                    {navText}
                 </ListItemText>
                 {open ? <ExpandLess /> : <ExpandMore />}
 
             </ListItem>
             <Collapse in={open} timeout='auto' unmountOnExit>
                 {navigationChildren && navigationChildren.map(({
-                    id: childId, icon, path, active,
+                    id: childId, displayText, icon, path, active,
                 }) => (
                     <Link
                         component={RouterLink}
@@ -86,7 +96,7 @@ function NavigatorChildren(props) {
                                     primary: classes.itemPrimary,
                                 }}
                             >
-                                {childId}
+                                {displayText}
                             </ListItemText>
                         </ListItem>
                     </Link>
@@ -101,6 +111,7 @@ Navigator.NavigatorChildren = {
     classes: PropTypes.shape({}).isRequired,
     navChildren: PropTypes.arrayOf(JSON).isRequired,
     navId: PropTypes.number.isRequired,
+    navText: PropTypes.string.isRequired,
 };
 
 export default NavigatorChildren;

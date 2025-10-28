@@ -26,6 +26,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import IconButton from '@mui/material/IconButton';
 import CircularProgress from '@mui/material/CircularProgress';
 import Alert from 'AppComponents/Shared/Alert';
+import { FormattedMessage } from 'react-intl';
 
 /**
  * Render base for dialogs.
@@ -41,6 +42,7 @@ function FormDialogBase({
     formSaveCallback,
     dialogOpenCallback,
     triggerIconProps,
+    saveButtonDisabled,
 }) {
     const [open, setOpen] = React.useState(false);
     const [saving, setSaving] = useState(false);
@@ -61,7 +63,9 @@ function FormDialogBase({
         } else if (savedPromise) {
             setSaving(true);
             savedPromise.then((data) => {
-                Alert.success(data);
+                if (data) {
+                    Alert.success(data);
+                }
             }).catch((e) => {
                 Alert.error(e);
             }).finally(() => {
@@ -92,13 +96,16 @@ function FormDialogBase({
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleClose}>
-                        Cancel
+                        <FormattedMessage
+                            id='Form.Dialog.Base.cancel.btn'
+                            defaultMessage='Cancel'
+                        />
                     </Button>
                     <Button
                         onClick={saveTriggerd}
                         color='primary'
                         variant='contained'
-                        disabled={saving}
+                        disabled={saving || saveButtonDisabled}
                         data-testid='form-dialog-base-save-btn'
                     >
                         {saving ? (<CircularProgress size={16} />) : (<>{saveButtonText}</>)}
@@ -118,6 +125,7 @@ FormDialogBase.defaultProps = {
         color: 'primary',
         component: 'span',
     },
+    saveButtonDisabled: false,
 };
 
 FormDialogBase.propTypes = {
@@ -136,6 +144,7 @@ FormDialogBase.propTypes = {
     triggerIconProps: PropTypes.shape({}),
     formSaveCallback: PropTypes.func.isRequired,
     dialogOpenCallback: PropTypes.func,
+    saveButtonDisabled: PropTypes.bool,
 };
 
 export default FormDialogBase;

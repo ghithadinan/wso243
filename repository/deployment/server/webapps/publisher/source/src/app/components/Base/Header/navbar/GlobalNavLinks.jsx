@@ -20,8 +20,8 @@ import { styled, useTheme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import List from '@mui/material/List';
 import LaunchIcon from '@mui/icons-material/Launch';
-import { FormattedMessage } from 'react-intl';
-import AuthManager, { isRestricted } from 'AppData/AuthManager';
+import { FormattedMessage, useIntl } from 'react-intl';
+import { isRestricted } from 'AppData/AuthManager';
 import { usePublisherSettings } from 'AppComponents/Shared/AppContext';
 import Divider from '@mui/material/Divider';
 
@@ -58,13 +58,10 @@ const StyledBox = styled(Box)((
  * @returns
  */
 function GlobalNavLinks(props) {
-    const publisherUser = !AuthManager.isNotPublisher();
-    const readOnlyUser = AuthManager.isReadOnlyUser();
-    const adminUser = AuthManager.isAdminUser();
 
     const { selected } = props;
     const theme = useTheme();
-
+    const intl = useIntl();
     const { data: settings } = usePublisherSettings();
     const [gateway, setGatewayType] = useState(true);
     
@@ -92,7 +89,10 @@ function GlobalNavLinks(props) {
                 <GlobalNavLink
                     to='/apis'
                     type='apis'
-                    title='APIs'
+                    title={intl.formatMessage({
+                        id: 'Base.Header.navbar.GlobalNavBar.title.apis',
+                        defaultMessage: 'APIs',
+                    })}
                     active={selected === 'apis'}
                 >
                     <FormattedMessage
@@ -105,7 +105,10 @@ function GlobalNavLinks(props) {
                         <GlobalNavLink
                             to='/service-catalog'
                             type='service-catalog'
-                            title='Services'
+                            title={intl.formatMessage({
+                                id: 'Base.Header.navbar.GlobalNavBar.title.services',
+                                defaultMessage: 'Services',
+                            })}
                             active={selected === 'service-catalog'}
                         >
                             <FormattedMessage
@@ -113,40 +116,43 @@ function GlobalNavLinks(props) {
                                 defaultMessage='Services'
                             />
                         </GlobalNavLink>
-                        { (readOnlyUser || publisherUser)
-                            && (
-                                <GlobalNavLink
-                                    to='/api-products'
-                                    type='api-product'
-                                    title='API Products'
-                                    active={selected === 'api-products'}
-                                >
-                                    <FormattedMessage
-                                        id='Base.Header.navbar.GlobalNavBar.api.products'
-                                        defaultMessage='API Products'
-                                    />
-                                </GlobalNavLink>
-                            )}
-                        {(adminUser)
-                            && (
-                                <GlobalNavLink
-                                    id='scope'
-                                    to='/scopes'
-                                    type='scopes'
-                                    title='Scopes'
-                                    active={selected === 'scopes'}
-                                >
-                                    <FormattedMessage
-                                        id='Base.Header.navbar.GlobalNavBar.scopes'
-                                        defaultMessage='Scopes'
-                                    />
-                                </GlobalNavLink>
-                            )}
+                        <GlobalNavLink
+                            to='/api-products'
+                            type='api-product'
+                            title={intl.formatMessage({
+                                id: 'Base.Header.navbar.GlobalNavBar.title.api.products',
+                                defaultMessage: 'API Products',
+                            })}
+                            active={selected === 'api-products'}
+                        >
+                            <FormattedMessage
+                                id='Base.Header.navbar.GlobalNavBar.api.products'
+                                defaultMessage='API Products'
+                            />
+                        </GlobalNavLink>
+                        <GlobalNavLink
+                            id='scope'
+                            to='/scopes'
+                            type='scopes'
+                            title={intl.formatMessage({
+                                id: 'Base.Header.navbar.GlobalNavBar.title.scopes',
+                                defaultMessage: 'Scopes',
+                            })}
+                            active={selected === 'scopes'}
+                        >
+                            <FormattedMessage
+                                id='Base.Header.navbar.GlobalNavBar.scopes'
+                                defaultMessage='Scopes'
+                            />
+                        </GlobalNavLink>
                         <GlobalNavLink
                             id='policies'
                             to='/policies'
                             type='policies'
-                            title='Policies'
+                            title={intl.formatMessage({
+                                id: 'Base.Header.navbar.GlobalNavBar.title.Policies',
+                                defaultMessage: 'Policies',
+                            })}
                             active={selected === 'policies'}
                         >
                             <FormattedMessage
@@ -160,7 +166,10 @@ function GlobalNavLinks(props) {
                                     id='global-policies'
                                     to='/global-policies'
                                     type='global-policies'
-                                    title='Global Policies'
+                                    title={intl.formatMessage({
+                                        id: 'Base.Header.navbar.GlobalNavBar.title.global.Policies',
+                                        defaultMessage: 'Global Policies',
+                                    })}
                                     active={selected === 'global-policies'}
                                 >
                                     <FormattedMessage id='Base.Header.navbar.GlobalNavBar.global.policies' 
@@ -169,6 +178,23 @@ function GlobalNavLinks(props) {
                             )}
                     </div>
                 )}
+                {(!isRestricted(['apim:subscription_approval_view', 'apim:subscription_approval_manage'])) && (
+                    <div>
+                        <GlobalNavLink
+                            to='/subscription/creation'
+                            type='subscriptioncreation'
+                            title={intl.formatMessage({
+                                id: 'Base.Header.navbar.GlobalNavBar.title.global.Tasks',
+                                defaultMessage: 'Tasks',
+                            })}
+                            active={selected === 'subscriptioncreation'}
+                        >
+                            <FormattedMessage
+                                id='Base.Header.navbar.GlobalNavBar.Tasks'
+                                defaultMessage='Tasks'
+                            />
+                        </GlobalNavLink>
+                    </div>)}
                 {analyticsMenuEnabled && (
                     <>
                         <Divider />
@@ -176,7 +202,10 @@ function GlobalNavLinks(props) {
                             <GlobalNavLink
                                 isExternalLink
                                 type='analytics'
-                                title='Analytics'
+                                title={intl.formatMessage({
+                                    id: 'Base.Header.navbar.GlobalNavBar.title.analytics',
+                                    defaultMessage: 'Analytics',
+                                })}
                             >
                                 <div style={{ flexDirection: 'row', display: 'flex' }}>
                                     <FormattedMessage

@@ -16,12 +16,16 @@
  * under the License.
  */
 module.exports = {
-    parser: 'babel-eslint', // Default parser throws unexpected token error while the syntax is correct
+    parser: '@babel/eslint-parser', // Default parser throws unexpected token error while the syntax is correct
     parserOptions: {
         ecmaVersion: 6,
         ecmaFeatures: {
             jsx: true,
             modules: true,
+        },
+        requireConfigFile: false,
+        babelOptions: {
+            presets: ['@babel/preset-react', '@babel/preset-typescript'],
         },
     },
     env: {

@@ -47,6 +47,7 @@ import API from 'AppData/api.js';
 import { doRedirectToLogin } from 'AppComponents/Shared/RedirectToLogin';
 import { withRouter } from 'react-router';
 import { isRestricted } from 'AppData/AuthManager';
+import { Editor as MonacoEditor } from '@monaco-editor/react';
 import Box from '@mui/material/Box';
 import { ToggleButton, ToggleButtonGroup } from '@mui/lab';
 import debounce from 'lodash.debounce'; // WARNING: This is coming from mui-datatable as a transitive dependency
@@ -58,7 +59,6 @@ import { getLinterResultsFromContent } from "./Linting/Linting";
 import APILintingSummary from './Linting/APILintingSummary';
 
 const EditorDialog = lazy(() => import('./SwaggerEditorDrawer' /* webpackChunkName: "EditorDialog" */));
-const MonacoEditor = lazy(() => import('react-monaco-editor' /* webpackChunkName: "APIDefMonacoEditor" */));
 const AsyncAPIEditor = lazy(() => import('./AsyncApiEditorDrawer'));
 
 const PREFIX = 'APIDefinition';
@@ -357,7 +357,7 @@ class APIDefinition extends React.Component {
             }
         }
 
-        getLinterResultsFromContent(modifiedContent).then((results) => {
+        getLinterResultsFromContent(modifiedContent, this.props.api.id).then((results) => {
             this.setState({ linterResults: results });
         });
     }
@@ -413,8 +413,10 @@ class APIDefinition extends React.Component {
      * Handles the yes button action of the save api definition confirmation dialog box.
      */
     handleSave() {
-        const { swaggerModified, asyncAPIModified } = this.state;
-        if (asyncAPIModified !== null) {
+        const { swaggerModified, asyncAPIModified, swaggerImporting } = this.state;
+        if (this.state.isImporting) {
+            this.setState({ openDialog: false }, () => this.updateSwaggerDefinition(swaggerImporting, '', ''));
+        } else if (asyncAPIModified !== null) {
             this.setState({ openDialog: false }, () => this.updateAsyncAPIDefinition(asyncAPIModified, '', ''));
         } else {
             this.setState({ openDialog: false }, () => this.updateSwaggerDefinition(swaggerModified, '', ''));
@@ -466,7 +468,7 @@ class APIDefinition extends React.Component {
      * */
     openEditor() {
         this.setState({ isImporting: false, linterSelectedLine: null });
-        getLinterResultsFromContent(this.state.swaggerModified).then((results) => {
+        getLinterResultsFromContent(this.state.swaggerModified, this.props.api.id).then((results) => {
             this.setState({ linterResults: results, openEditor: true });
         });
         
@@ -475,7 +477,7 @@ class APIDefinition extends React.Component {
     openEditorToImport(importingSwagger, linterSelectedLine) {
         this.setState({ isImporting: true, swaggerImporting: importingSwagger, 
             linterSelectedLine, isSwaggerUI: false });
-        getLinterResultsFromContent(importingSwagger).then((results) => {
+        getLinterResultsFromContent(importingSwagger, this.props.api.id).then((results) => {
             this.setState({ linterResults: results, openEditor: true });
         });
     }
@@ -492,7 +494,7 @@ class APIDefinition extends React.Component {
                 id: 'Apis.Details.APIDefinition.info.updating.auditapi',
                 defaultMessage: 'To reflect the changes made, you need to click Audit API',
             }));
-            const redirectUrl = '/apis/' + api.id + '/api definition';
+            const redirectUrl = '/apis/' + api.id + '/api-definition';
             history.push(redirectUrl);
         }
     }
@@ -877,7 +879,7 @@ class APIDefinition extends React.Component {
             <div>
                 <Suspense fallback={<Progress />}>
                     {isAuditApiClicked ? (
-                        <APISecurityAudit apiId={api.id} />
+                        <APISecurityAudit apiId={api.id} key={swagger}/>
                     ) : (
                         <MonacoEditor
                             language={format}

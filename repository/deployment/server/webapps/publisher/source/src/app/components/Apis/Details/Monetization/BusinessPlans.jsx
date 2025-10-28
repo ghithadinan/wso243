@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { styled } from '@mui/material/styles';
 import PropTypes from 'prop-types';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, injectIntl } from 'react-intl';
 import { Grid, Typography } from '@mui/material';
 import Box from '@mui/material/Box';
 import CheckIcon from '@mui/icons-material/Check';
@@ -110,11 +110,16 @@ class BusinessPlans extends Component {
      * @memberof BusinessPlans
      */
     componentDidMount() {
+        this.getPoliciesAndMonetization();
+    }
+
+    getPoliciesAndMonetization() {
         const { api } = this.props;
         api.getSubscriptionPolicies(api.id).then((policies) => {
             const filteredPolicies = policies.filter((policy) => policy.tierPlan === 'COMMERCIAL');
             this.setState({ policies: filteredPolicies });
         });
+
         api.getMonetization(api.id).then((status) => {
             this.setState({ monetizedPolices: status.properties });
         });
@@ -133,6 +138,7 @@ class BusinessPlans extends Component {
      */
     render() {
         const { policies, monetizedPolices } = this.state;
+        const { intl } = this.props;
         if (monetizedPolices === null) {
             return <Progress />;
         }
@@ -216,7 +222,10 @@ class BusinessPlans extends Component {
                                 dense
                                 paperProps={{ elevation: 1 }}
                                 type='info'
-                                message='Click Save to monetize all unmonetized policies'
+                                message={intl.formatMessage({
+                                    id: 'Apis.Details.Monetization.BusinessPlans.commercial.policies.banner.save',
+                                    defaultMessage: 'Click Save to monetize all unmonetized policies',
+                                })}
                             />
                         ) : (
                             <Banner
@@ -224,7 +233,10 @@ class BusinessPlans extends Component {
                                 dense
                                 paperProps={{ elevation: 1 }}
                                 type='info'
-                                message='No commercial policies to monetize'
+                                message={intl.formatMessage({
+                                    id: 'Apis.Details.Monetization.BusinessPlans.commercial.no.policies.banner',
+                                    defaultMessage: 'No commercial policies to monetize',
+                                })}
                             />
                         )
                     }
@@ -239,4 +251,4 @@ BusinessPlans.propTypes = {
     classes: PropTypes.shape({}).isRequired,
 };
 
-export default (BusinessPlans);
+export default injectIntl(BusinessPlans,{ forwardRef: true });

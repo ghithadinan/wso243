@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
 import { styled } from '@mui/material/styles';
-import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import Grid from '@mui/material/Grid';
 import Configurations from 'Config';
@@ -124,19 +123,6 @@ const RestAPIMenu = (props) => {
                             >
                                 {name}
                             </Box>
-                        </Grid>
-                        <Grid item xs={11}>
-                            {disabled && (
-                                <Box>
-                                    <Typography variant='body2' color='primary'>
-                                        *You are not authorized to create or update
-                                        {' '}
-                                        {name.toLowerCase()}
-                                        {' '}
-                                        due to insufficient permissions
-                                    </Typography>
-                                </Box>
-                            )}
                         </Grid>
                     </Grid>
                 </Box>

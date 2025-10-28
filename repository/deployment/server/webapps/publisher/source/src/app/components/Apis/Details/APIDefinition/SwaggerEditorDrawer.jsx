@@ -15,7 +15,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-import React, { lazy } from 'react';
+import React from 'react';
 import { styled } from '@mui/material/styles';
 import Grid from '@mui/material/Grid';
 import PropTypes from 'prop-types';
@@ -23,6 +23,7 @@ import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import InlineMessage from 'AppComponents/Shared/InlineMessage';
 import { FormattedMessage } from 'react-intl';
+import { Editor as MonacoEditor } from '@monaco-editor/react';
 import CancelIcon from '@mui/icons-material/Cancel';
 import IconButton from '@mui/material/IconButton';
 import { orange } from '@mui/material/colors';
@@ -41,16 +42,17 @@ const classes = {
     topMargin: `${PREFIX}-topMargin`
 };
 
-
-const Root = styled('div')(() => ({
+const Root = styled('div')(({ theme }) => ({
     [`& .${classes.editorPane}`]: {
-        width: '50%',
+        width: `calc(50% - ${theme.spacing(1)})`,
         height: '100%',
         overflow: 'auto',
     },
 
     [`& .${classes.editorRoot}`]: {
         height: '100%',
+        marginTop: theme.spacing(-1),
+        marginLeft: theme.spacing(-1),
     },
 
     [`& .${classes.glyphMargin}`]: {
@@ -66,8 +68,6 @@ const Root = styled('div')(() => ({
         paddingTop: '10px',   
     }
 }));
-
-const MonacoEditor = lazy(() => import('react-monaco-editor' /* webpackChunkName: "APIDefMonacoEditor" */));
 
 /**
  * This component hosts the Swagger Editor component.
@@ -172,7 +172,7 @@ class SwaggerEditorDrawer extends React.Component {
                             value={swagger}
                             onChange={this.onContentChange}
                             options={{ glyphMargin: true }}
-                            editorDidMount={this.editorDidMount}
+                            onMount={this.editorDidMount}
                         />
                     </Grid>
                     <Grid item className={classes.editorPane}>

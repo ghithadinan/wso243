@@ -41,7 +41,7 @@ import MonetizationIcon from '@mui/icons-material/LocalAtm';
 import { isRestricted } from 'AppData/AuthManager';
 import { PROPERTIES as UserProperties } from 'AppData/User';
 import { useUser } from 'AppComponents/Shared/AppContext';
-import { useIntl } from 'react-intl';
+import { useIntl, FormattedMessage } from 'react-intl';
 
 const PREFIX = 'DevelopSectionMenu';
 
@@ -114,7 +114,8 @@ const AccordionDetails = MuiAccordionDetails;
  */
 export default function DevelopSectionMenu(props) {
     const {
-        pathPrefix, isAPIProduct, api, getLeftMenuItemForResourcesByType, getLeftMenuItemForDefinitionByType,
+        pathPrefix, isAPIProduct, api, getLeftMenuItemForResourcesByType, getLeftMenuItemForDefinitionByType, 
+        componentValidator,
     } = props;
     const user = useUser();
     const [portalConfigsExpanded, setPortalConfigsExpanded] = useState(user
@@ -146,7 +147,10 @@ export default function DevelopSectionMenu(props) {
                     expandIcon={<ExpandMoreIcon className={classes.expandIconColor} />}
                 >
                     <Typography className={classes.leftLInkText}>
-                        Portal Configurations
+                        <FormattedMessage
+                            id='Apis.Details.index.design.portal.configs.title'
+                            defaultMessage='Portal Configurations'
+                        />
                     </Typography>
                 </AccordianSummary>
                 <AccordionDetails>
@@ -172,7 +176,7 @@ export default function DevelopSectionMenu(props) {
                             id='left-menu-itembusinessinfo'
                             route='business-info'
                         />
-                        {!isAPIProduct && (
+                        {(componentValidator.subscriptions.includes("subscriptions") && !isAPIProduct) && (
                             <LeftMenuItem
                                 text={intl.formatMessage({
                                     id: 'Apis.Details.index.subscriptions',
@@ -232,11 +236,17 @@ export default function DevelopSectionMenu(props) {
                     <Typography 
                         className={classes.leftLInkText} 
                         data-testid='itest-api-config'>
-                        API Configurations
+                        <FormattedMessage
+                            id='Apis.Details.index.design.api.configs.title'
+                            defaultMessage='API Configurations'
+                        />
                     </Typography>
                     <Tooltip
-                        title={'If you make any changes to the API configuration, you need to redeploy'
-                            + ' the API to see updates in the API Gateway.'}
+                        title={intl.formatMessage({
+                            id: 'Apis.Details.index.design.api.configs.title.tooltip',
+                            defaultMessage: 'If you make any changes to the API configuration, you need to redeploy'
+                                + ' the API to see updates in the API Gateway.',
+                        })}
                         placement='bottom'
                     >
                         <IconButton color='primary' size='small' aria-label='delete' sx={{ p: '3px' }}>
@@ -249,7 +259,7 @@ export default function DevelopSectionMenu(props) {
                         root: classes.root2
                     }}>
                     <div>
-                        {!isAPIProduct && !api.isWebSocket() && (api.gatewayVendor === 'wso2') && (
+                        {!isAPIProduct && !api.isWebSocket() && (
                             <LeftMenuItem
                                 text={intl.formatMessage({
                                     id: 'Apis.Details.index.runtime.configs',
@@ -299,7 +309,8 @@ export default function DevelopSectionMenu(props) {
                                 id='left-menu-itemendpoints'
                             />
                         )}
-                        {!isAPIProduct && (api.gatewayVendor === 'wso2') && (
+                        {(componentValidator.localScopes.includes("operationScopes") 
+                            && (!isAPIProduct)) && 
                             <LeftMenuItem
                                 text={intl.formatMessage({
                                     id: 'Apis.Details.index.left.menu.scope',
@@ -310,7 +321,7 @@ export default function DevelopSectionMenu(props) {
                                 Icon={<ScopesIcon />}
                                 id='left-menu-itemLocalScopes'
                             />
-                        )}
+                        }
                         {api.advertiseInfo && !api.advertiseInfo.advertised && !isAPIProduct
                             && (api.type === 'HTTP' || api.type === 'SOAP' || api.type === 'SOAPTOREST') && (
                             <LeftMenuItem
@@ -336,9 +347,10 @@ export default function DevelopSectionMenu(props) {
                             id='left-menu-itemproperties'
                         />
 
-                        {!api.isWebSocket() && !isRestricted(['apim:api_publish'], api) && (
+                        {(componentValidator.monetization.includes("monetization") && 
+                            (!api.isWebSocket() && !isRestricted(['apim:api_publish'], api))) && (
                             <>
-                                {!isAPIProduct && (api.gatewayVendor === 'wso2') && (
+                                {!isAPIProduct && (
                                     <LeftMenuItem
                                         text={intl.formatMessage({
                                             id: 'Apis.Details.index.monetization',

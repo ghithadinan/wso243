@@ -23,7 +23,7 @@ import { useTheme } from '@mui/material';
 import Box from '@mui/material/Box';
 import Divider from '@mui/material/Divider';
 import Grid from '@mui/material/Grid';
-
+import { FormattedMessage } from 'react-intl';
 import AuthManager from 'AppData/AuthManager';
 import RestAPIMenu from 'AppComponents/Apis/Listing/Landing/Menus/RestAPIMenu';
 import SoapAPIMenu from 'AppComponents/Apis/Listing/Landing/Menus/SoapAPIMenu';
@@ -31,6 +31,7 @@ import GraphqlAPIMenu from 'AppComponents/Apis/Listing/Landing/Menus/GraphqlAPIM
 import StreamingAPIMenu from 'AppComponents/Apis/Listing/Landing/Menus/StreamingAPIMenu';
 import ServiceCatalogMenu from 'AppComponents/Apis/Listing/Landing/Menus/ServiceCatalogMenu';
 import MenuButton from 'AppComponents/Shared/MenuButton';
+import AIAPIMenu from '../Landing/Menus/AIAPIMenu';
 
 const PREFIX = 'APICreateMenu';
 
@@ -122,12 +123,14 @@ const APICreateMenu = () => {
                                 justify='space-around'
                                 alignItems='flex-start'
                                 spacing={2}
+                                mt={1}
                             >
                                 <RestAPIMenu isCreateMenu icon={restApiIcon} />
                                 <SoapAPIMenu isCreateMenu icon={soapApiIcon} />
                                 <GraphqlAPIMenu isCreateMenu icon={graphqlIcon} />
                                 <StreamingAPIMenu isCreateMenu icon={streamingApiIcon} />
-                                <Box display={{ xs: 'none', md: 'block' }} mx={2}>
+                                <AIAPIMenu isCreateMenu icon={restApiIcon} />
+                                <Box display={{ xs: 'none', md: 'block' }}>
                                     <Divider className={classes.dividerCls} orientation='vertical' 
                                         variant='inset' />
                                 </Box>
@@ -144,12 +147,13 @@ const APICreateMenu = () => {
                             >
                                 <RestAPIMenu isCreateMenu icon={restApiIcon} />
                                 <GraphqlAPIMenu isCreateMenu icon={graphqlIcon} />
+                                <AIAPIMenu isCreateMenu icon={restApiIcon} />
                             </Grid>
                         )
                         }
                     
                 >
-                    Create API
+                    <FormattedMessage id='Apis.Listing.Components.Create.API' defaultMessage='Create API' />
                 </MenuButton>
             </Root>
         )

@@ -19,6 +19,7 @@
 import React, {
     useReducer, useEffect, useState, useCallback, useMemo,
 } from 'react';
+import { useIntl } from 'react-intl';
 import Grid from '@mui/material/Grid';
 import Paper from '@mui/material/Paper';
 import { useAPI } from 'AppComponents/Apis/Details/components/ApiContext';
@@ -29,20 +30,23 @@ import Banner from 'AppComponents/Shared/Banner';
 import API from 'AppData/api';
 import CircularProgress from '@mui/material/CircularProgress';
 import PropTypes from 'prop-types';
-import SwaggerParser from '@apidevtools/swagger-parser';
+import SwaggerClient from 'swagger-client';
 import { isRestricted } from 'AppData/AuthManager';
 import CONSTS from 'AppData/Constants';
 import Configurations from 'Config';
+import { usePublisherSettings } from 'AppComponents/Shared/AppContext';
+import { Progress } from 'AppComponents/Shared';
+import APIRateLimiting from './components/APIRateLimiting';
 import Operation from './components/Operation';
 import GroupOfOperations from './components/GroupOfOperations';
 import AddOperation from './components/AddOperation';
 import GoToDefinitionLink from './components/GoToDefinitionLink';
-import APIRateLimiting from './components/APIRateLimiting';
 import {
     extractPathParameters, isSelectAll, mapAPIOperations, getVersion, VERSIONS,
 } from './operationUtils';
 import OperationsSelector from './components/OperationsSelector';
 import SaveOperations from './components/SaveOperations';
+
 
 /**
  * This component handles the Resource page in API details though it's written in a sharable way
@@ -61,6 +65,7 @@ export default function Resources(props) {
         disableAddOperation,
     } = props;
 
+    const { data: publisherSettings, isLoading } = usePublisherSettings();
     const [api, updateAPI] = useAPI();
     const [pageError, setPageError] = useState(false);
     const [operationRateLimits, setOperationRateLimits] = useState([]);
@@ -74,7 +79,9 @@ export default function Resources(props) {
     const [resolvedSpec, setResolvedSpec] = useState({ spec: {}, errors: [] });
     const [focusOperationLevel, setFocusOperationLevel] = useState(false);
     const [expandedResource, setExpandedResource] = useState(false);
+    const [componentValidator, setComponentValidator] = useState([]);
 
+    const intl = useIntl();
     /**
      *
      *
@@ -235,7 +242,14 @@ export default function Resources(props) {
                 let alreadyExistCount = 0;
                 for (const currentVerb of data.verbs) {
                     if (addedOperations[data.target][currentVerb]) {
-                        const message = `Operation already exist with ${data.target} and ${currentVerb}`;
+                        const message = intl.formatMessage({
+                            id: 'Apis.Details.Configuration.Resources.operation.verbs.already.exist.error',
+                            defaultMessage: 'Operation already exist with {data_target} and {currentVerb}',
+                        },
+                        {
+                            data_target: data.target,
+                            currentVerb,
+                        });
                         Alert.warning(message);
                         console.warn(message);
                         alreadyExistCount++;
@@ -250,7 +264,10 @@ export default function Resources(props) {
                     }
                 }
                 if (alreadyExistCount === data.verbs.length) {
-                    Alert.error('Operation(s) already exist!');
+                    Alert.error(intl.formatMessage({
+                        id: 'Apis.Details.Configuration.Resources.operation.already.exist.error',
+                        defaultMessage: 'Operation(s) already exist!',
+                    }));
                     return currentOperations;
                 }
                 return addedOperations;
@@ -363,18 +380,15 @@ export default function Resources(props) {
         /*
         * Used SwaggerParser.validate() because we can get the errors as well.
         */
-        SwaggerParser.validate(specCopy, (err, result) => {
-            setResolvedSpec(() => {
-                const errors = err ? [err] : [];
-                return {
-                    spec: result,
-                    errors,
-                };
+        SwaggerClient.resolve({ spec: specCopy })
+            .then(specR => {
+                setResolvedSpec(specR);
+            })
+            .finally(() => {
+                operationsDispatcher({ action: 'init', data: rawSpec.paths });
+                setOpenAPISpec(rawSpec);
+                setSecurityDefScopesFromSpec(rawSpec);
             });
-        });
-        operationsDispatcher({ action: 'init', data: rawSpec.paths });
-        setOpenAPISpec(rawSpec);
-        setSecurityDefScopesFromSpec(rawSpec);
     }
 
     /**
@@ -393,7 +407,10 @@ export default function Resources(props) {
                 if (error.response) {
                     setPageError(error.response.body);
                 } else {
-                    Alert.error('Error while updating the definition');
+                    Alert.error(intl.formatMessage({
+                        id: 'Apis.Details.Configuration.Resources.operation.definition.update.error',
+                        defaultMessage: 'Error while updating the definition',
+                    }));
                 }
             });
     }
@@ -450,7 +467,10 @@ export default function Resources(props) {
         switch (type) {
             case 'save':
                 if (isSelectAll(markedOperations, copyOfOperations)) {
-                    const message = 'At least one operation is required for the API';
+                    const message = intl.formatMessage({
+                        id: 'Apis.Details.Configuration.Resources.operation.required',
+                        defaultMessage: 'At least one operation is required for the API',
+                    });
                     Alert.warning(message);
                     return Promise.reject(new Error(message));
                 }
@@ -480,7 +500,10 @@ export default function Resources(props) {
             return updateAPI({ apiThrottlingPolicy })
                 .catch((error) => {
                     console.error(error);
-                    Alert.error('Error while updating the API');
+                    Alert.error(intl.formatMessage({
+                        id: 'Apis.Details.Configuration.Resources.operation.api.update.error',
+                        defaultMessage: 'Error while updating the API',
+                    }));
                 })
                 .then(() => updateSwagger({ ...openAPISpec, paths: copyOfOperations }));
         } else {
@@ -496,6 +519,13 @@ export default function Resources(props) {
                 }
             });
     }, []);
+
+    useEffect(() => {
+        if (!isLoading) {
+            setComponentValidator(publisherSettings.gatewayFeatureCatalog
+                .gatewayFeatures[api.gatewayType ? api.gatewayType : 'wso2/synapse'].resources);
+        }
+    }, [isLoading]);
 
     useEffect(() => {
         setApiThrottlingPolicy(api.apiThrottlingPolicy);
@@ -593,6 +623,9 @@ export default function Resources(props) {
             </Grid>
         );
     }
+    if (isLoading) {
+        return <Progress per={80} message='Loading app settings ...' />;
+    }
     return (
         <Grid container direction='row' justifyContent='flex-start' spacing={2} alignItems='stretch'>
             {pageError && (
@@ -603,6 +636,7 @@ export default function Resources(props) {
             {!disableRateLimiting && (
                 <Grid item md={12}>
                     <APIRateLimiting
+                        api={api}
                         operationRateLimits={operationRateLimits}
                         value={apiThrottlingPolicy}
                         onChange={setApiThrottlingPolicy}
@@ -626,6 +660,7 @@ export default function Resources(props) {
                             setSelectedOperation={setSelectedOperation}
                             enableSecurity={enableSecurity}
                             disableSecurity={disableSecurity}
+                            componentValidator={componentValidator}
                         />
                     )}
                     {Object.entries(operations).map(([target, verbObject]) => (
@@ -670,6 +705,7 @@ export default function Resources(props) {
                                                     setFocusOperationLevel={setFocusOperationLevel}
                                                     expandedResource={expandedResource}
                                                     setExpandedResource={setExpandedResource}
+                                                    componentValidator={componentValidator}
                                                 />
                                             </Grid>
                                         ) : null;

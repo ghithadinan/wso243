@@ -51,11 +51,6 @@ const styles = {
     block: {
         display: 'block',
     },
-    clearSearch: {
-        position: 'absolute',
-        right: 111,
-        top: 13,
-    },
     addUser: {
         marginRight: 1,
     },
@@ -149,7 +144,12 @@ export default function ListApis() {
     }
 
     return (
-        <ContentBase>
+        <ContentBase
+            title={intl.formatMessage({
+                defaultMessage: 'Change API Provider',
+                id: 'Apis.Listing.Listing.title',
+            })}
+        >
             <AppBar sx={styles.searchBar} position='static' color='default' elevation={0}>
                 <Toolbar>
                     <form onSubmit={filterApps} style={{ width: '100%' }} disabled={loading}>
@@ -157,17 +157,14 @@ export default function ListApis() {
                             <Grid item>
                                 <SearchIcon sx={styles.block} color='inherit' />
                             </Grid>
-                            <Grid item xs>
+                            <Grid item xs sx={{ display: 'flex', alignItems: 'center' }}>
                                 <TextField
+                                    hiddenLabel
                                     fullWidth
                                     variant='standard'
                                     id='search-label'
-                                    label={intl.formatMessage({
-                                        defaultMessage: 'Search by API',
-                                        id: 'Apis.Listing.Listing.apis.search.label',
-                                    })}
                                     placeholder={intl.formatMessage({
-                                        defaultMessage: 'Api Name',
+                                        defaultMessage: 'Search by API Name',
                                         id: 'Apis.Listing.Listing.search.placeholder',
                                     })}
                                     sx={(theme) => ({
@@ -194,7 +191,6 @@ export default function ListApis() {
                                     >
                                         <IconButton
                                             aria-label='delete'
-                                            sx={styles.clearSearch}
                                             onClick={clearSearch}
                                         >
                                             <HighlightOffRoundedIcon />
@@ -247,7 +243,26 @@ export default function ListApis() {
                                     count={totalApps}
                                     rowsPerPage={rowsPerPage}
                                     rowsPerPageOptions={[5, 10, 15]}
-                                    labelRowsPerPage='Show'
+                                    labelDisplayedRows={({ from, to, count }) => {
+                                        if (count !== -1) {
+                                            return intl.formatMessage({
+                                                id: 'Applications.Listing.apis.list.rows.range.label',
+                                                defaultMessage: '{from}-{to} of {count}',
+                                            },
+                                            {
+                                                from, to, count,
+                                            });
+                                        }
+                                        return intl.formatMessage({
+                                            id: 'Applications.Listing.apis.list.rows.more.than.label',
+                                            defaultMessage: 'more than {to}',
+                                        },
+                                        { to });
+                                    }}
+                                    labelRowsPerPage={intl.formatMessage({
+                                        id: 'Applications.Listing.apis.list.rows.show.label',
+                                        defaultMessage: 'Show',
+                                    })}
                                     page={page}
                                     backIconButtonProps={{
                                         'aria-label': 'Previous Page',

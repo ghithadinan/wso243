@@ -15,7 +15,6 @@
  */
 
 
-import CONSTS from 'AppData/Constants';
 import APIClientFactory from './APIClientFactory';
 import Resource from './Resource';
 import Wsdl from './Wsdl';
@@ -678,9 +677,9 @@ export default class API extends Resource {
      * Get all tags
      * @returns {promise} promise all tags of APIs
      */
-    getAllTags() {
+    getAllTags(limit = 25) {
         const promiseGet = this.client.then((client) => {
-            return client.apis.Tags.get_tags(this._requestMetaData());
+            return client.apis.Tags.get_tags({ limit }, this._requestMetaData());
         }).catch((error) => {
             console.error(error);
         });
@@ -914,7 +913,7 @@ export default class API extends Resource {
      * @returns {promise} With given callback attached to the success chain else API invoke promise.
      */
     runAiAgentSubsequentIterations(apiId, apiChatRequestId, response) {
-        const promise = this.client.then((client) => {
+        return this.client.then((client) => {
             const payload = {
                 apiId,
                 apiChatAction: 'EXECUTE',
@@ -930,7 +929,6 @@ export default class API extends Resource {
                 this._requestMetaData(),
             );
         });
-        return promise;
     }
 
     /**
@@ -958,6 +956,29 @@ export default class API extends Resource {
     getMarketplaceAssistantApiCount() {
         return this.client.then((client) => {
             return client.apis['Marketplace Assistant'].getMarketplaceAssistantApiCount(this._requestMetaData());
+        });
+    }
+
+    resetApplicationPolicy(userId, applicationId) {
+        const payload = { applicationId: applicationId };
+        return this.client.then((client) => {
+            return client.apis.Applications.post_applications__applicationId__reset_throttle_policy(
+                payload,
+                {
+                    requestBody: {
+                        userName: userId,
+                    }
+                },
+                this._requestMetaData(),
+            );
+        });
+    }
+    /**
+     * Get the Organization information to which the user belongs to
+     */
+    getUserOrganizationInfo() {
+        return this.client.then((client) => {
+            return client.apis.Users.organizationInformation(this._requestMetaData());
         });
     }
 }

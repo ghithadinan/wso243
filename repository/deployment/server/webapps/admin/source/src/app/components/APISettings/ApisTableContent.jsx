@@ -38,6 +38,7 @@ const styles = {
         height: theme.spacing(5),
         '& td': {
             padding: theme.spacing(0.5),
+            paddingLeft: theme.spacing(2),
         },
     }),
     appOwner: {
@@ -75,15 +76,11 @@ const styles = {
         flexDirection: 'row',
         alignItems: 'left',
         justifyContent: 'left',
-        marginLeft: 10,
     },
     textfield: {
         maxHeight: '10px',
         marginTop: '-5px',
         maxWidth: '120px',
-    },
-    tableCell: {
-        marginLeft: 10,
     },
 };
 
@@ -195,13 +192,13 @@ const ApisTableContent = ({ apis, updateApiList }) => {
                         {api.name}
                     </StyledTableCell>
                     <StyledTableCell align='left'>
-                        <StyledDiv sx={styles.tableCell}>
+                        <StyledDiv>
                             {api.version}
                         </StyledDiv>
                     </StyledTableCell>
                     <StyledTableCell align='left'>
                         {!editableRows.has(api.id) && (
-                            <StyledDiv sx={styles.tableCell}>
+                            <StyledDiv>
                                 { api.provider }
                                 <IconButton color='primary' onClick={() => handleEditClick(api.id)}>
                                     <EditIcon aria-label='edit-api-settings' />
@@ -212,7 +209,12 @@ const ApisTableContent = ({ apis, updateApiList }) => {
                             <StyledDiv sx={styles.tableActionBtnContainer}>
                                 <TextField
                                     id='standard-basic'
-                                    label='Provider Name'
+                                    label={(
+                                        <FormattedMessage
+                                            id='AdminPages.ApiSettings.EditApi.form.edit.provider.label'
+                                            defaultMessage='Provider Name'
+                                        />
+                                    )}
                                     variant='standard'
                                     size='small'
                                     defaultValue={api.provider}

@@ -104,7 +104,8 @@ const apiSchema = Joi.extend((joi) => ({
                 const composeQueryJSON = queryString.parse(composeQuery);
                 composeQueryJSON.limit = 10;
                 composeQueryJSON.offset = 0;
-                return API.search(composeQueryJSON);
+                const api = new API();
+                return api.validateAPIParameter(composeQueryJSON);
             },
         },
     ],
@@ -196,7 +197,8 @@ const definition = {
     operationTarget: Joi.string().required(),
     websubOperationTarget: Joi.string().regex(/^[^{}]*$/).required(),
     name: Joi.string().min(1).max(255),
-    email: Joi.string().email({ tlds: true }).required(),
+    email: Joi.string().email({ tlds: false }).required(),
+    isNumber: Joi.number(),
 };
 
 export default definition;

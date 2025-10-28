@@ -34,6 +34,7 @@ import Banner from 'AppComponents/Shared/Banner';
 import DefaultAPIForm from 'AppComponents/Apis/Create/Components/DefaultAPIForm';
 import { usePublisherSettings } from 'AppComponents/Shared/AppContext';
 import AuthManager from 'AppData/AuthManager';
+import Utils from 'AppData/Utils';
 
 const PREFIX = 'APICreateStreamingAPI';
 
@@ -54,7 +55,7 @@ const StyledAPICreateBase = styled(APICreateBase)((
 
 const APICreateStreamingAPI = (props) => {
     // const theme = useTheme();
-    const { history } = props;
+    const { history, multiGateway } = props;
     const intl = useIntl();
     const { data: settings, isLoading, error: settingsError } = usePublisherSettings();
     const [pageError, setPageError] = useState(null);
@@ -75,6 +76,7 @@ const APICreateStreamingAPI = (props) => {
         apiType = apiType.toUpperCase();
     }
     const isWebSub = (apiType === 'WEBSUB');
+    const complianceErrorCode = 903300;
 
     useEffect(() => {
         API.asyncAPIPolicies().then((response) => {
@@ -143,6 +145,8 @@ const APICreateStreamingAPI = (props) => {
     }
     const [apiInputs, inputsDispatcher] = useReducer(apiInputsReducer, {
         formValidity: false,
+        gatewayType: multiGateway && (multiGateway.filter((gw) => gw.value === 'wso2/synapse').length > 0 ?
+            'wso2/synapse' : multiGateway[0]?.value),
     });
 
     const isAPICreatable = apiInputs.name && apiInputs.context && apiInputs.version && !isCreating;
@@ -210,14 +214,20 @@ const APICreateStreamingAPI = (props) => {
         const promisedCreatedAPI = newAPI
             .saveStreamingAPI()
             .then((api) => {
-                Alert.info('API created successfully');
+                Alert.info(intl.formatMessage({
+                    id: 'Apis.Create.Default.APICreateDefault.streaming.success',
+                    defaultMessage: 'API created successfully',
+                }));
                 return api;
             })
             .catch((error) => {
                 if (error.response) {
                     Alert.error(error.response.body.description);
                 } else {
-                    Alert.error('Something went wrong while adding the API');
+                    Alert.error(intl.formatMessage({
+                        id: 'Apis.Create.Default.APICreateDefault.streaming.error',
+                        defaultMessage: 'Something went wrong while adding the API',
+                    }));
                 }
                 console.error(error);
                 setIsPublishing(false); // We don't publish if something when wrong
@@ -242,7 +252,10 @@ const APICreateStreamingAPI = (props) => {
             streamingApi.createRevision(api.id, body)
                 .then((api1) => {
                     const revisionId = api1.body.id;
-                    Alert.info('API Revision created successfully');
+                    Alert.info(intl.formatMessage({
+                        id: 'Apis.Create.Default.APICreateDefault.streaming.revision.success',
+                        defaultMessage: 'API Revision created successfully',
+                    }));
                     setIsRevisioning(false);
                     const envList = settings.environment.map((env) => env.name);
                     const body1 = [];
@@ -285,7 +298,12 @@ const APICreateStreamingAPI = (props) => {
                     setIsDeploying(true);
                     streamingApi.deployRevision(api.id, revisionId, body1)
                         .then(() => {
-                            Alert.info('API Revision Deployed Successfully');
+                            Alert.info(
+                                intl.formatMessage({
+                                    id: 'Apis.Create.Default.APICreateDefault.streaming.revision.deployed.',
+                                    defaultMessage: 'API Revision Deployed Successfully',
+                                }),
+                            );
                             setIsDeploying(false);
                             // Publishing API after deploying
                             setIsPublishing(true);
@@ -307,8 +325,54 @@ const APICreateStreamingAPI = (props) => {
                                 })
                                 .catch((error) => {
                                     if (error.response) {
-                                        Alert.error(error.response.body.description);
-                                        setPageError(error.response.body);
+                                        if (error.response.body.code === complianceErrorCode) {
+                                            const violations =
+                                                JSON.parse(error.response.body.description).blockingViolations;
+                                            Alert.error(
+                                                <Box sx={{ width: '100%' }}>
+                                                    <Typography>
+                                                        <FormattedMessage
+                                                            id={'Apis.Create.StreamingAPI.APICreateStreamingAPI.'
+                                                                + 'error.governance.violation'}
+                                                            defaultMessage={'Failed to publish the API due to '
+                                                                + 'governance violations'}
+                                                        />
+                                                    </Typography>
+                                                    <Box sx={{
+                                                        display: 'flex',
+                                                        justifyContent: 'flex-end',
+                                                        mt: 1
+                                                    }}>
+                                                        <Button
+                                                            onClick={() =>
+                                                                Utils.downloadAsJSON(
+                                                                    violations, 'governance-violations'
+                                                                )}
+                                                            sx={{
+                                                                color: 'inherit',
+                                                                fontWeight: 600,
+                                                                textDecoration: 'none',
+                                                                transition: 'all 0.3s',
+                                                                '&:hover': {
+                                                                    backgroundColor: 'inherit',
+                                                                    transform: 'translateY(-2px)',
+                                                                    textShadow: '0px 1px 2px rgba(0,0,0,0.2)',
+                                                                },
+                                                            }}
+                                                        >
+                                                            <FormattedMessage
+                                                                id={'Apis.Create.StreamingAPI.APICreateStreamingAPI.'
+                                                                    + 'error.governance.violation.download'}
+                                                                defaultMessage='Download Violations'
+                                                            />
+                                                        </Button>
+                                                    </Box>
+                                                </Box>
+                                            )
+                                        } else {
+                                            Alert.error(error.response.body.description);
+                                            setPageError(error.response.body);
+                                        }
                                     } else {
                                         Alert.error(intl.formatMessage({
                                             id: 'Apis.Create.Default.APICreateDefault.error.errorMessage.publish',
@@ -325,8 +389,50 @@ const APICreateStreamingAPI = (props) => {
                         })
                         .catch((error) => {
                             if (error.response) {
-                                Alert.error(error.response.body.description);
-                                setPageError(error.response.body);
+                                if (error.response.body.code === complianceErrorCode) {
+                                    const violations = JSON.parse(error.response.body.description).blockingViolations;
+                                    Alert.error(
+                                        <Box sx={{ width: '100%' }}>
+                                            <Typography>
+                                                <FormattedMessage
+                                                    id={'Apis.Create.StreamingAPI.APICreateStreamingAPI.error.'
+                                                        + 'governance.violation'}
+                                                    defaultMessage='Deployment failed due to governance violations'
+                                                />
+                                            </Typography>
+                                            <Box sx={{
+                                                display: 'flex',
+                                                justifyContent: 'flex-end',
+                                                mt: 1
+                                            }}>
+                                                <Button
+                                                    onClick={() =>
+                                                        Utils.downloadAsJSON(violations, 'governance-violations')}
+                                                    sx={{
+                                                        color: 'inherit',
+                                                        fontWeight: 600,
+                                                        textDecoration: 'none',
+                                                        transition: 'all 0.3s',
+                                                        '&:hover': {
+                                                            backgroundColor: 'inherit',
+                                                            transform: 'translateY(-2px)',
+                                                            textShadow: '0px 1px 2px rgba(0,0,0,0.2)',
+                                                        },
+                                                    }}
+                                                >
+                                                    <FormattedMessage
+                                                        id={'Apis.Create.StreamingAPI.APICreateStreamingAPI.error.'
+                                                            + 'governance.violation.download'}
+                                                        defaultMessage='Download Violations'
+                                                    />
+                                                </Button>
+                                            </Box>
+                                        </Box>
+                                    )
+                                } else {
+                                    Alert.error(error.response.body.description);
+                                    setPageError(error.response.body);
+                                }
                             } else {
                                 Alert.error(intl.formatMessage({
                                     id: 'Apis.Create.Default.APICreateDefault.error.errorMessage.deploy.revision',
@@ -342,8 +448,50 @@ const APICreateStreamingAPI = (props) => {
                 })
                 .catch((error) => {
                     if (error.response) {
-                        Alert.error(error.response.body.description);
-                        setPageError(error.response.body);
+                        if (error.response.body.code === complianceErrorCode) {
+                            const violations = JSON.parse(error.response.body.description).blockingViolations;
+                            Alert.error(
+                                <Box sx={{ width: '100%' }}>
+                                    <Typography>
+                                        <FormattedMessage
+                                            id={'Apis.Create.StreamingAPI.APICreateStreamingAPI.error.'
+                                                + 'governance.violation'}
+                                            defaultMessage={'Failed to create the API Revision due to '
+                                                + 'governance violations'}
+                                        />
+                                    </Typography>
+                                    <Box sx={{
+                                        display: 'flex',
+                                        justifyContent: 'flex-end',
+                                        mt: 1
+                                    }}>
+                                        <Button
+                                            onClick={() => Utils.downloadAsJSON(violations, 'governance-violations')}
+                                            sx={{
+                                                color: 'inherit',
+                                                fontWeight: 600,
+                                                textDecoration: 'none',
+                                                transition: 'all 0.3s',
+                                                '&:hover': {
+                                                    backgroundColor: 'inherit',
+                                                    transform: 'translateY(-2px)',
+                                                    textShadow: '0px 1px 2px rgba(0,0,0,0.2)',
+                                                },
+                                            }}
+                                        >
+                                            <FormattedMessage
+                                                id={'Apis.Create.StreamingAPI.APICreateStreamingAPI.error.'
+                                                    + 'governance.violation.download'}
+                                                defaultMessage='Download Violations'
+                                            />
+                                        </Button>
+                                    </Box>
+                                </Box>
+                            )
+                        } else {
+                            Alert.error(error.response.body.description);
+                            setPageError(error.response.body);
+                        }
                     } else {
                         Alert.error(intl.formatMessage({
                             id: 'Apis.Create.Default.APICreateDefault.error.errorMessage.create.revision',
@@ -423,8 +571,10 @@ const APICreateStreamingAPI = (props) => {
                         endpointPlaceholderText='Streaming Provider'
                         appendChildrenBeforeEndpoint
                         hideEndpoint={hideEndpoint}
+                        multiGateway={multiGateway}
                         isWebSocket={(apiType && apiType === protocolKeys.WebSocket)
                             || apiInputs.protocol === protocolKeys.WebSocket}
+                        settings={settings}
                     >
                         <TextField
                             fullWidth
@@ -474,7 +624,10 @@ const APICreateStreamingAPI = (props) => {
                                 onClick={createAPIOnly}
                                 data-testid='itest-create-streaming-api-button'
                             >
-                                Create
+                                <FormattedMessage
+                                    id='Apis.Create.streaming.Components.create.btn'
+                                    defaultMessage='Create'
+                                />
                                 {' '}
                                 {isCreating && !isPublishButtonClicked && <CircularProgress size={24} />}
                             </Button>
@@ -489,7 +642,13 @@ const APICreateStreamingAPI = (props) => {
                                         || !isAPICreatable || !apiInputs.isFormValid}
                                     onClick={createAndPublish}
                                 >
-                                    {(!isPublishing && !isRevisioning && !isDeploying) && 'Create & Publish'}
+                                    {(!isPublishing && !isRevisioning && !isDeploying)
+                                        && (
+                                            <FormattedMessage
+                                                id='Apis.Create.streaming.Components.create.and.publish.btn'
+                                                defaultMessage='Create & Publish'
+                                            />
+                                        )}
                                     {(isPublishing || isRevisioning || isDeploying) && <CircularProgress size={24} />}
                                     {isCreating && isPublishing && 'Creating API . . .'}
                                     {!isCreating && isRevisioning && !isDeploying && 'Creating Revision . . .'}

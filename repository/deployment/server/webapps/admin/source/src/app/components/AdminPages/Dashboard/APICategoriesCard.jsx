@@ -78,11 +78,13 @@ export default function APICategoriesCard() {
         rel='noopener noreferrer'
         target='_blank'
         href={Configurations.app.docUrl
-     + 'develop/customizations/customizing-the-developer-portal/'
-     + 'customize-api-listing/categorizing-and-grouping-apis/'
-     + 'api-category-based-grouping'}
+            + 'reference/customize-product/customizations/customizing-the-developer-portal/'
+            + 'customize-api-listing/api-category-based-grouping'}
     >
-        Go to Category Documentation
+        <FormattedMessage
+            id='Dashboard.apiCategories.noApiCategories.card.document.link.text'
+            defaultMessage='Go to Category Documentation'
+        />
         <LaunchIcon fontSize='inherit' />
     </a>,
                         }}

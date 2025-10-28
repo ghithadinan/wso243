@@ -1,6 +1,7 @@
 import React from 'react';
 import Grid from '@mui/material/Grid';
 import PropTypes from 'prop-types';
+import { useIntl } from 'react-intl'
 import Button from '@mui/material/Button';
 import ButtonGroup from '@mui/material/ButtonGroup';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
@@ -12,7 +13,6 @@ import CircularProgress from '@mui/material/CircularProgress';
 import MenuItem from '@mui/material/MenuItem';
 import MenuList from '@mui/material/MenuList';
 
-const options = ['Save and deploy', 'Save'];
 
 /**
  *
@@ -21,8 +21,25 @@ const options = ['Save and deploy', 'Save'];
 export default function CustomSplitButton(props) {
     const [open, setOpen] = React.useState(false);
     const {
-        advertiseInfo, handleSave, handleSaveAndDeploy, isUpdating, api, id,
+        advertiseInfo, handleSave, handleSaveAndDeploy, isUpdating, api, id, isValidSequenceBackend,
+        isCustomBackendSelected
     } = props;
+    const intl = useIntl();
+    const options = [
+        {
+            key: 'Save and deploy',
+            label: intl.formatMessage({
+                id: 'Custom.Split.Button.Save.And.Deploy',
+                defaultMessage: 'Save and deploy',
+            }),
+        },
+        {
+            key: 'Save',
+            label: intl.formatMessage({
+                id: 'Custom.Split.Button.Save',
+                defaultMessage: 'Save',
+            }),
+        }];
     const anchorRef = React.useRef(null);
     const [selectedIndex, setSelectedIndex] = React.useState(1);
     const securityScheme = [...api.securityScheme];
@@ -31,14 +48,14 @@ export default function CustomSplitButton(props) {
     const isEndpointAvailable = api.endpointConfig !== null;
     const isTierAvailable = api.policies.length !== 0;
 
-    const isDeployButtonDisabled = (((api.type !== 'WEBSUB' && !isEndpointAvailable))
+    const isDeployButtonDisabled = (((api.type !== 'WEBSUB' && (!isCustomBackendSelected && !isEndpointAvailable)))
     || (!isMutualSslOnly && !isTierAvailable)
     || api.workflowStatus === 'CREATED');
 
     const handleClick = (event, index) => {
         setSelectedIndex(index);
         setOpen(false);
-        if (`${options[index]}` === 'Save') {
+        if (`${options[index].key}` === 'Save') {
             handleSave();
         } else {
             handleSaveAndDeploy();
@@ -66,7 +83,7 @@ export default function CustomSplitButton(props) {
                         variant='contained'
                         color='primary'
                     >
-                        {options[1]}
+                        {options[1].label}
                     </Button>
                 </Grid>
             ) : (
@@ -76,17 +93,17 @@ export default function CustomSplitButton(props) {
                         color='primary'
                         ref={anchorRef}
                         aria-label='split button'
-                        disabled={isUpdating}
+                        disabled={isUpdating || (!isValidSequenceBackend && isCustomBackendSelected)}
                         style={{ width: '200px' }}
                     >
                         <Button
                             onClick={(event) => handleClick(event, selectedIndex)}
-                            disabled={isUpdating}
+                            disabled={isUpdating || (!isValidSequenceBackend && isCustomBackendSelected)}
                             data-testid = 'custom-select-save-button'
                             style={{ width: '200px' }}
                             id={id}
                         >
-                            {options[selectedIndex]}
+                            {options[selectedIndex].label}
                             {isUpdating && <CircularProgress size={24} />}
                         </Button>
                         <Button
@@ -114,12 +131,13 @@ export default function CustomSplitButton(props) {
                                         <MenuList id='split-button-menu'>
                                             {options.map((option, index) => (
                                                 <MenuItem
-                                                    key={option}
+                                                    key={option.key}
                                                     selected={index === selectedIndex}
                                                     onClick={(event) => handleClick(event, index)}
-                                                    disabled={(option === 'Save and deploy' && isDeployButtonDisabled)}
+                                                    disabled={(option.key === 'Save and deploy'
+                                                        && isDeployButtonDisabled)}
                                                 >
-                                                    {option}
+                                                    {option.label}
                                                 </MenuItem>
                                             ))}
                                         </MenuList>
@@ -134,9 +152,15 @@ export default function CustomSplitButton(props) {
     );
 }
 
+CustomSplitButton.defaultProps = {
+    isCustomBackendSelected: false,
+    isValidSequenceBackend: true,
+};
 CustomSplitButton.propTypes = {
     api: PropTypes.shape({}).isRequired,
     handleSave: PropTypes.shape({}).isRequired,
     handleSaveAndDeploy: PropTypes.shape({}).isRequired,
     isUpdating: PropTypes.bool.isRequired,
+    isValidSequenceBackend: PropTypes.bool,
+    isCustomBackendSelected: PropTypes.bool,
 };

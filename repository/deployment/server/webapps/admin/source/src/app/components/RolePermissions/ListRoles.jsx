@@ -36,10 +36,23 @@ import AddRoleWizard from './Commons/AddRoleWizard';
 
 const headCells = [
     {
-        id: 'role', numeric: false, disablePadding: false, label: 'Roles', enableSort: true,
+        id: 'role',
+        numeric: false,
+        disablePadding: false,
+        label: <FormattedMessage
+            id='RolePermissions.ListRoles.table.column.role'
+            defaultMessage='Roles'
+        />,
+        enableSort: true,
     },
     {
-        id: 'permissions', numeric: false, disablePadding: false, label: 'Scope Assignments',
+        id: 'permissions',
+        numeric: false,
+        disablePadding: false,
+        label: <FormattedMessage
+            id='RolePermissions.ListRoles.table.column.scope.assignments'
+            defaultMessage='Scope Assignments'
+        />,
     },
 ];
 
@@ -145,9 +158,11 @@ export default function ListRoles() {
     const [hasListPermission, setHasListPermission] = useState(true);
     const intl = useIntl();
     const [errorMessage, setError] = useState(null);
+    const [searchText, setSearchText] = useState('');
 
-    useEffect(() => {
+    const fetchData = useCallback(() => {
         PermissionAPI.getRoleAliases();
+        setSearchText('');
         Promise.all([PermissionAPI.getRoleAliases(), PermissionAPI.systemScopes()]).then(
             ([roleAliasesRes, systemScopesRes]) => {
                 setSystemScopes(systemScopesRes.body);
@@ -169,6 +184,10 @@ export default function ListRoles() {
     }, []);
 
     useEffect(() => {
+        fetchData();
+    }, [fetchData]);
+
+    useEffect(() => {
         if (systemScopes && roleAliases) {
             const [roleMapping, appMapping] = extractMappings(systemScopes.list);
             setPermissionMappings(mergeRoleAliasesAndScopeMappings(roleAliases.list, roleMapping));
@@ -187,6 +206,7 @@ export default function ListRoles() {
 
     const onSearch = (searchKey) => {
         const keys = Object.keys(permissionMappings);
+        setSearchText(searchKey.target.value);
         const filteredKeys = keys.filter((key) => key.toLowerCase().includes(searchKey.target.value.toLowerCase()));
         const newPermissionMappings = {};
         for (let i = 0; i < filteredKeys.length; i++) {
@@ -276,11 +296,19 @@ export default function ListRoles() {
         );
     }
     return (
-        <ContentBase title='Scope Assignments' pageDescription={pageDesc}>
+        <ContentBase
+            title={intl.formatMessage({
+                id: 'RolePermissions.ListRoles.title.role.permissions',
+                defaultMessage: 'Scope Assignments',
+            })}
+            pageDescription={pageDesc}
+        >
             <ListAddOns
                 searchActive={searchProps.active}
                 searchPlaceholder={searchProps.searchPlaceholder}
                 filterData={onSearch}
+                onRefresh={fetchData}
+                searchValue={searchText}
             >
                 <Grid item>
                     <Button
@@ -356,7 +384,10 @@ export default function ListRoles() {
                                     role={role}
                                     isAlias={mapping.aliases}
                                 >
-                                    Delete
+                                    <FormattedMessage
+                                        id='RolePermissions.ListRoles.permission.delete.button'
+                                        defaultMessage='Delete'
+                                    />
                                 </DeletePermission>
                             </Box>
                         </Box>),

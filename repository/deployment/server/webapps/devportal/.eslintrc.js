@@ -16,12 +16,15 @@
  * under the License.
  */
 module.exports = {
-    parser: 'babel-eslint', // Default parser throws unexpected token error while the syntax is correct
+    parser: '@babel/eslint-parser', // Default parser throws unexpected token error while the syntax is correct
     parserOptions: {
         ecmaVersion: 6,
         ecmaFeatures: {
             jsx: true,
             modules: true,
+        },
+        babelOptions: {
+            presets: ['@babel/preset-react', '@babel/preset-typescript'],
         },
     },
     env: {
@@ -33,6 +36,7 @@ module.exports = {
     },
     extends: ['airbnb', 'plugin:jsx-a11y/recommended'], // http://airbnb.io/javascript/react/
     rules: {
+        "linebreak-style": 0,
         'max-len': ['error', { code: 140, tabWidth: 4 }],
         'require-jsdoc': [
             'warn',
