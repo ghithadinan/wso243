@@ -23,6 +23,7 @@
 <%@ page import="org.apache.commons.lang.StringUtils" %>
 <%@ page import="org.owasp.encoder.Encode" %>
 <%@ page import="org.wso2.carbon.identity.application.authentication.endpoint.util.Constants" %>
+<%@ page import="org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils" %>
 <%@ page import="org.wso2.carbon.identity.mgt.constants.SelfRegistrationStatusCodes" %>
 <%@ page import="org.wso2.carbon.identity.mgt.endpoint.util.IdentityManagementEndpointConstants" %>
 <%@ page import="org.wso2.carbon.identity.mgt.endpoint.util.IdentityManagementServiceUtil" %>
@@ -39,9 +40,11 @@
 <%@ page import="org.wso2.carbon.identity.mgt.endpoint.util.client.model.Claim" %>
 <%@ page import="org.wso2.carbon.identity.mgt.endpoint.util.client.model.User" %>
 <%@ page import="org.wso2.carbon.identity.core.util.IdentityTenantUtil" %>
+<%@ page import="org.wso2.carbon.utils.multitenancy.MultitenantConstants" %>
 <%@ page import="org.wso2.carbon.utils.multitenancy.MultitenantUtils" %>
 <%@ page import="java.io.File" %>
 <%@ page import="java.util.Arrays" %>
+<%@ page import="java.util.ArrayList" %>
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.Locale" %>
 <%@ page import="java.util.Map" %>
@@ -63,10 +66,26 @@
     String username = request.getParameter("username");
     String consentPurposeGroupName = "SELF-SIGNUP";
     String consentPurposeGroupType = "SYSTEM";
+    String JIT = "JIT";
     String[] missingClaimList = new String[0];
     String[] missingClaimDisplayName = new String[0];
     Map<String, Claim> uniquePIIs = null;
     boolean piisConfigured = false;
+
+    ArrayList<String> claimsToHide = new ArrayList();
+    claimsToHide.add("http://wso2.org/claims/identity/accountLocked");
+    claimsToHide.add("http://wso2.org/claims/identity/accountDisabled");
+    claimsToHide.add("http://wso2.org/claims/identity/accountState");
+    claimsToHide.add("http://wso2.org/claims/identity/adminForcedPasswordReset");
+    claimsToHide.add("http://wso2.org/claims/identity/failedEmailOtpAttempts");
+    claimsToHide.add("http://wso2.org/claims/identity/failedLoginAttempts");
+    claimsToHide.add("http://wso2.org/claims/identity/failedLoginAttemptsBeforeSuccess");
+    claimsToHide.add("http://wso2.org/claims/identity/failedLoginLockoutCount");
+    claimsToHide.add("http://wso2.org/claims/identity/failedPasswordRecoveryAttempts");
+    claimsToHide.add("http://wso2.org/claims/identity/failedSmsOtpAttempts");
+    claimsToHide.add("http://wso2.org/claims/identity/failedTotpAttempts");
+    claimsToHide.add("http://wso2.org/claims/identity/lockedReason");
+
     if (request.getParameter(Constants.MISSING_CLAIMS) != null) {
         missingClaimList = request.getParameter(Constants.MISSING_CLAIMS).split(",");
     }
@@ -81,8 +100,18 @@
     User user = IdentityManagementServiceUtil.getInstance().resolveUser(username, tenantDomain, isSaaSApp);
 
     if (skipSignUpEnableCheck) {
-        consentPurposeGroupName = "JIT";
+        consentPurposeGroupName = JIT;
     }
+
+    String tenantQualifiedUsername = username;
+    if (!MultitenantUtils.isEmailUserName() && FrameworkUtils.retainEmailDomainOnProvisioning() &&
+        consentPurposeGroupName == JIT && username.contains(IdentityManagementEndpointConstants.TENANT_DOMAIN_SEPARATOR) && tenantDomain != null) {
+        if (username.split(IdentityManagementEndpointConstants.TENANT_DOMAIN_SEPARATOR).length == 2) {
+            tenantQualifiedUsername = username + IdentityManagementEndpointConstants.TENANT_DOMAIN_SEPARATOR + tenantDomain;
+        }
+    }
+    user = IdentityManagementServiceUtil.getInstance().resolveUser(tenantQualifiedUsername, tenantDomain, isSaaSApp);
+
     if (StringUtils.isEmpty(username)) {
         request.setAttribute("error", true);
         request.setAttribute("errorMsg", IdentityManagementEndpointUtil.i18n(recoveryResourceBundle, "Pick.username"));
@@ -366,14 +395,14 @@
                                             <%=IdentityManagementEndpointUtil.i18n(recoveryResourceBundle, "Password")%>
                                         </label>
                                         <input id="password" name="password" type="password"
-                                               class="form-control" required>
+                                               class="form-control" autocomplete="off" required>
                                     </div>
                                     <div class="required field">
                                         <label for="password2" class="control-label">
                                             <%=IdentityManagementEndpointUtil.i18n(recoveryResourceBundle, "Confirm.password")%>
                                         </label>
                                         <input id="password2" name="password2" type="password" class="form-control"
-                                               data-match="reg-password" required>
+                                               data-match="reg-password" autocomplete="off" required>
                                     </div>
                                 </div>
 
@@ -445,6 +474,7 @@
                                                 !StringUtils.equals(claim.getUri(), IdentityManagementEndpointConstants.ClaimURIs.CHALLENGE_QUESTION_URI_CLAIM) &&
                                                 !StringUtils.equals(claim.getUri(), IdentityManagementEndpointConstants.ClaimURIs.CHALLENGE_QUESTION_1_CLAIM) &&
                                                 !StringUtils.equals(claim.getUri(), IdentityManagementEndpointConstants.ClaimURIs.CHALLENGE_QUESTION_2_CLAIM) &&
+                                                !claimsToHide.contains(claim.getUri()) &&
                                                 !(claim.getReadOnly() != null ? claim.getReadOnly() : false)) {
                                             String claimURI = claim.getUri();
                                             String claimValue = request.getParameter(claimURI);
